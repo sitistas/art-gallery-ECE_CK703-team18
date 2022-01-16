@@ -1,79 +1,92 @@
 BEGIN TRANSACTION;
-DROP TABLE IF EXISTS "Collector";
-CREATE TABLE IF NOT EXISTS "Collector" (
-	"ID"	integer NOT NULL,
-	"Phone_number"	integer NOT NULL,
-	"Name"	string NOT NULL,
-	"Address"	string NOT NULL,
-	PRIMARY KEY("ID" AUTOINCREMENT)
-);
-DROP TABLE IF EXISTS "Product";
-CREATE TABLE IF NOT EXISTS "Product" (
-	"Barcode"	integer NOT NULL,
-	"Category"	string NOT NULL,
-	"Title"	string NOT NULL,
-	"Price"	float NOT NULL,
-	PRIMARY KEY("Barcode" AUTOINCREMENT)
-);
-DROP TABLE IF EXISTS "Room";
-CREATE TABLE IF NOT EXISTS "Room" (
-	"Number"	integer NOT NULL,
-	"Title"	string NOT NULL,
-	"Capacity"	integer NOT NULL,
-	"Floor_Number"	integer NOT NULL,
-	"Area"	integer NOT NULL,
-	PRIMARY KEY("Number" AUTOINCREMENT)
-);
-DROP TABLE IF EXISTS "Exhibition";
-CREATE TABLE IF NOT EXISTS "Exhibition" (
-	"ID"	integer NOT NULL,
-	"Title"	string NOT NULL,
-	"Topic"	string NOT NULL,
-	"Start_date"	date NOT NULL,
-	"End_date"	date,
-	"Information"	TEXT,
-	"Is_Permanent"	boolean NOT NULL,
-	PRIMARY KEY("ID" AUTOINCREMENT)
-);
 DROP TABLE IF EXISTS "Takes_Place";
 CREATE TABLE IF NOT EXISTS "Takes_Place" (
 	"EXH_ID"	integer NOT NULL,
 	"Room_Number"	integer NOT NULL,
-	FOREIGN KEY("Room_Number") REFERENCES "Room"("Number"),
+	PRIMARY KEY("EXH_ID","Room_Number"),
 	FOREIGN KEY("EXH_ID") REFERENCES "Exhibition"("ID"),
-	PRIMARY KEY("EXH_ID","Room_Number")
+	FOREIGN KEY("Room_Number") REFERENCES "Room"("Number")
 );
 DROP TABLE IF EXISTS "Shown";
 CREATE TABLE IF NOT EXISTS "Shown" (
 	"EXH_ID"	integer NOT NULL,
 	"AP_ID"	integer NOT NULL,
+	PRIMARY KEY("EXH_ID","AP_ID"),
 	FOREIGN KEY("AP_ID") REFERENCES "Piece_of_Art"("ID"),
-	FOREIGN KEY("EXH_ID") REFERENCES "Exhibition"("ID"),
-	PRIMARY KEY("EXH_ID","AP_ID")
-);
-DROP TABLE IF EXISTS "Worker";
-CREATE TABLE IF NOT EXISTS "Worker" (
-	"AFM"	integer NOT NULL,
-	"Full_Name"	string NOT NULL,
-	"Birth_date"	date NOT NULL,
-	"Salary"	INTEGER NOT NULL,
-	"Home_address"	string NOT NULL,
-	PRIMARY KEY("AFM" AUTOINCREMENT)
+	FOREIGN KEY("EXH_ID") REFERENCES "Exhibition"("ID")
 );
 DROP TABLE IF EXISTS "Under_maint";
 CREATE TABLE IF NOT EXISTS "Under_maint" (
 	"Maint_ID"	integer NOT NULL,
 	"AP_ID"	integer NOT NULL,
-	FOREIGN KEY("AP_ID") REFERENCES "Piece_of_Art"("ID"),
+	PRIMARY KEY("Maint_ID","AP_ID"),
 	FOREIGN KEY("Maint_ID") REFERENCES "Maintenance"("ID"),
-	PRIMARY KEY("Maint_ID","AP_ID")
+	FOREIGN KEY("AP_ID") REFERENCES "Piece_of_Art"("ID")
+);
+DROP TABLE IF EXISTS "Physical";
+CREATE TABLE IF NOT EXISTS "Physical" (
+	"ID"	integer NOT NULL,
+	PRIMARY KEY("ID"),
+	FOREIGN KEY("ID") REFERENCES "Exhibition"("ID")
+);
+DROP TABLE IF EXISTS "Online";
+CREATE TABLE IF NOT EXISTS "Online" (
+	"ID"	integer NOT NULL,
+	"Link"	string NOT NULL,
+	"Designer"	string NOT NULL,
+	PRIMARY KEY("ID" AUTOINCREMENT),
+	FOREIGN KEY("ID") REFERENCES "Exhibition"("ID")
+);
+DROP TABLE IF EXISTS "Inspired_by";
+CREATE TABLE IF NOT EXISTS "Inspired_by" (
+	"AP_ID"	integer NOT NULL,
+	"Prod_barcode"	integer NOT NULL,
+	PRIMARY KEY("AP_ID","Prod_barcode"),
+	FOREIGN KEY("Prod_barcode") REFERENCES "Product"("Barcode"),
+	FOREIGN KEY("AP_ID") REFERENCES "Piece_of_Art"("ID")
+);
+DROP TABLE IF EXISTS "Is_Presented";
+CREATE TABLE IF NOT EXISTS "Is_Presented" (
+	"GT_ID"	integer NOT NULL,
+	"EXH_ID"	integer NOT NULL,
+	PRIMARY KEY("GT_ID","EXH_ID"),
+	FOREIGN KEY("GT_ID") REFERENCES "Guided_Tour"("ID"),
+	FOREIGN KEY("EXH_ID") REFERENCES "Exhibition"("ID")
+);
+DROP TABLE IF EXISTS "Collection";
+CREATE TABLE IF NOT EXISTS "Collection" (
+	"ID"	integer NOT NULL CHECK("ID" >= 0),
+	"Name"	string NOT NULL,
+	"Collection_Info"	TEXT NOT NULL DEFAULT 'Δεν υπάρχουν πληροφορίες για την συγκεκριμένη συλλογή',
+	"Supervisor_AFM"	integer NOT NULL,
+	PRIMARY KEY("ID" AUTOINCREMENT),
+	FOREIGN KEY("Supervisor_AFM") REFERENCES "Worker"("AFM")
+);
+DROP TABLE IF EXISTS "Collector";
+CREATE TABLE IF NOT EXISTS "Collector" (
+	"ID"	integer NOT NULL CHECK("ID" >= 0),
+	"Phone_number"	integer NOT NULL CHECK(length("Phone_number") >= 10),
+	"Name"	string NOT NULL,
+	"Address"	string NOT NULL,
+	PRIMARY KEY("ID" AUTOINCREMENT)
+);
+DROP TABLE IF EXISTS "Exhibition";
+CREATE TABLE IF NOT EXISTS "Exhibition" (
+	"ID"	integer NOT NULL CHECK("ID" >= 0),
+	"Title"	string NOT NULL,
+	"Topic"	string NOT NULL,
+	"Start_date"	date NOT NULL CHECK("Start_date" BETWEEN '1900-1-1' AND '2050-12-31'),
+	"End_date"	date CHECK("End_date" BETWEEN '1900-1-1' AND '2050-12-31'),
+	"Information"	TEXT,
+	"Is_Permanent"	boolean NOT NULL,
+	PRIMARY KEY("ID" AUTOINCREMENT)
 );
 DROP TABLE IF EXISTS "Artist";
 CREATE TABLE IF NOT EXISTS "Artist" (
-	"ID"	integer NOT NULL,
+	"ID"	integer NOT NULL CHECK("ID" >= 0),
 	"Full_Name"	string NOT NULL,
-	"Last_updated"	date NOT NULL DEFAULT CURRENT_TIMESTAMP,
-	"Birth_date"	date NOT NULL,
+	"Last_updated"	date NOT NULL DEFAULT CURRENT_TIMESTAMP CHECK("Last_updated" BETWEEN '1900-1-1' AND '2050-12-31'),
+	"Birth_date"	date NOT NULL CHECK("Birth_date" BETWEEN 1000 AND 3000),
 	"Date_of_death"	date,
 	"Information"	TEXT NOT NULL DEFAULT 'Δεν υπάρχουν πληροφορίες για τον/την καλλιτέχνη',
 	"Place_of_birth"	string NOT NULL,
@@ -81,66 +94,43 @@ CREATE TABLE IF NOT EXISTS "Artist" (
 	"Sex"	CHAR NOT NULL CHECK("Sex" IN ('Α', 'Θ')),
 	PRIMARY KEY("ID" AUTOINCREMENT)
 );
-DROP TABLE IF EXISTS "Physical";
-CREATE TABLE IF NOT EXISTS "Physical" (
-	"ID"	integer NOT NULL,
-	FOREIGN KEY("ID") REFERENCES "Exhibition"("ID"),
-	PRIMARY KEY("ID")
-);
-DROP TABLE IF EXISTS "Online";
-CREATE TABLE IF NOT EXISTS "Online" (
-	"ID"	integer NOT NULL,
-	"Link"	string NOT NULL,
-	"Designer"	string NOT NULL,
-	FOREIGN KEY("ID") REFERENCES "Exhibition"("ID"),
-	PRIMARY KEY("ID" AUTOINCREMENT)
-);
-DROP TABLE IF EXISTS "Collection";
-CREATE TABLE IF NOT EXISTS "Collection" (
-	"ID"	integer NOT NULL,
-	"Name"	string NOT NULL,
-	"Collection_Info"	TEXT NOT NULL DEFAULT 'Δεν υπάρχουν πληροφορίες για την συγκεκριμένη συλλογή',
-	"Supervisor_AFM"	integer NOT NULL,
-	FOREIGN KEY("Supervisor_AFM") REFERENCES "Worker"("AFM"),
-	PRIMARY KEY("ID" AUTOINCREMENT)
-);
 DROP TABLE IF EXISTS "Guided_Tour";
 CREATE TABLE IF NOT EXISTS "Guided_Tour" (
-	"ID"	integer NOT NULL,
+	"ID"	integer NOT NULL CHECK("ID" >= 0),
 	"Group_Name"	string,
-	"Number_of_participants"	integer NOT NULL,
+	"Number_of_participants"	integer NOT NULL CHECK("Number_of_participants" > 0),
 	"Language"	string NOT NULL DEFAULT 'Ελληνικά',
-	"Date_time"	datetime NOT NULL,
-	"Duration"	integer NOT NULL DEFAULT 90,
+	"Date_time"	datetime NOT NULL CHECK("Date_time" BETWEEN '1900-1-1' AND '2050-12-31'),
+	"Duration"	integer NOT NULL DEFAULT 90 CHECK("Duration" > 0),
 	"Guide_AFM"	INTEGER NOT NULL,
-	FOREIGN KEY("Guide_AFM") REFERENCES "Worker"("AFM"),
-	PRIMARY KEY("ID" AUTOINCREMENT)
+	PRIMARY KEY("ID" AUTOINCREMENT),
+	FOREIGN KEY("Guide_AFM") REFERENCES "Worker"("AFM")
 );
 DROP TABLE IF EXISTS "Maintenance";
 CREATE TABLE IF NOT EXISTS "Maintenance" (
-	"ID"	integer NOT NULL,
+	"ID"	integer NOT NULL CHECK("ID" >= 0),
 	"Location"	string NOT NULL,
-	"Cost"	float NOT NULL,
+	"Cost"	float NOT NULL CHECK("Cost" >= 0),
 	"Technique"	string NOT NULL,
-	"Starting_date"	date NOT NULL,
-	"Expected_return"	date NOT NULL,
+	"Starting_date"	date NOT NULL CHECK("Starting_date" BETWEEN '1900-1-1' AND '2050-12-31'),
+	"Expected_return"	date NOT NULL CHECK("Expected_return" BETWEEN '1900-1-1' AND '2050-12-31'),
 	"Maintainer_AFM"	INTEGER,
-	FOREIGN KEY("Maintainer_AFM") REFERENCES "Worker"("AFM"),
-	PRIMARY KEY("ID" AUTOINCREMENT)
+	PRIMARY KEY("ID" AUTOINCREMENT),
+	FOREIGN KEY("Maintainer_AFM") REFERENCES "Worker"("AFM")
 );
 DROP TABLE IF EXISTS "Piece_of_Art";
 CREATE TABLE IF NOT EXISTS "Piece_of_Art" (
-	"ID"	integer NOT NULL,
+	"ID"	integer NOT NULL CHECK("ID" >= 0),
 	"Title"	string NOT NULL,
 	"Artist_ID"	integer NOT NULL,
 	"Collection_ID"	INTEGER NOT NULL DEFAULT 0,
 	"Year_of_creation"	integer NOT NULL,
-	"Acquisition_Date"	date NOT NULL DEFAULT '2020-01-01',
-	"Date_added"	date NOT NULL DEFAULT '2020-01-01',
+	"Acquisition_Date"	date NOT NULL DEFAULT '2020-01-01' CHECK("Acquisition_Date" BETWEEN '1900-1-1' AND '2050-12-31'),
+	"Date_added"	date NOT NULL DEFAULT '2020-01-01' CHECK("Date_added" BETWEEN '1900-1-1' AND '2050-12-31'),
 	"Type"	text NOT NULL,
 	"Material"	string NOT NULL,
-	"Height"	float NOT NULL,
-	"Width"	float NOT NULL,
+	"Height"	float NOT NULL CHECK("Height" > 0),
+	"Width"	float NOT NULL CHECK("Width" > 0),
 	"Depth"	float,
 	"Archived"	boolean NOT NULL DEFAULT 0,
 	"Description"	text,
@@ -149,75 +139,37 @@ CREATE TABLE IF NOT EXISTS "Piece_of_Art" (
 	"Owner_ID"	integer,
 	"Borrow_date"	date,
 	"Return_date"	date,
-	FOREIGN KEY("Owner_ID") REFERENCES "Collector"("ID"),
+	PRIMARY KEY("ID" AUTOINCREMENT),
 	FOREIGN KEY("Artist_ID") REFERENCES "Artist"("ID"),
-	FOREIGN KEY("Collection_ID") REFERENCES "Collection"("ID"),
-	PRIMARY KEY("ID" AUTOINCREMENT)
+	FOREIGN KEY("Owner_ID") REFERENCES "Collector"("ID"),
+	FOREIGN KEY("Collection_ID") REFERENCES "Collection"("ID")
 );
-DROP TABLE IF EXISTS "Inspired_by";
-CREATE TABLE IF NOT EXISTS "Inspired_by" (
-	"AP_ID"	integer NOT NULL,
-	"Prod_barcode"	integer NOT NULL,
-	FOREIGN KEY("Prod_barcode") REFERENCES "Product"("Barcode"),
-	FOREIGN KEY("AP_ID") REFERENCES "Piece_of_Art"("ID"),
-	PRIMARY KEY("AP_ID","Prod_barcode")
+DROP TABLE IF EXISTS "Product";
+CREATE TABLE IF NOT EXISTS "Product" (
+	"Barcode"	integer NOT NULL CHECK("Barcode" >= 0),
+	"Category"	string NOT NULL,
+	"Title"	string NOT NULL,
+	"Price"	float NOT NULL CHECK("Price" >= 0),
+	PRIMARY KEY("Barcode" AUTOINCREMENT)
 );
-DROP TABLE IF EXISTS "Is_Presented";
-CREATE TABLE IF NOT EXISTS "Is_Presented" (
-	"GT_ID"	integer NOT NULL,
-	"EXH_ID"	integer NOT NULL,
-	FOREIGN KEY("GT_ID") REFERENCES "Guided_Tour"("ID"),
-	FOREIGN KEY("EXH_ID") REFERENCES "Exhibition"("ID"),
-	PRIMARY KEY("GT_ID","EXH_ID")
+DROP TABLE IF EXISTS "Room";
+CREATE TABLE IF NOT EXISTS "Room" (
+	"Number"	integer NOT NULL CHECK("Number" >= 0),
+	"Title"	string NOT NULL,
+	"Capacity"	integer NOT NULL CHECK("Capacity" > 0),
+	"Floor_Number"	integer NOT NULL,
+	"Area"	integer NOT NULL CHECK("Area" > 0),
+	PRIMARY KEY("Number" AUTOINCREMENT)
 );
-INSERT INTO "Collector" VALUES (1,6912345678,'Αικατερίνη Ροδοκανάκη','Κωστή Παλαμά 100');
-INSERT INTO "Collector" VALUES (2,2101111111,'Γρηγόριος Μαρασλής','Ελύτη 50');
-INSERT INTO "Collector" VALUES (3,6923456789,'Ματθαίος Ρενιέρης','Πανεπιστημίου 10');
-INSERT INTO "Collector" VALUES (4,6935490029,'Μαριλένα Λιακοπούλου','Σύρου 3');
-INSERT INTO "Collector" VALUES (5,6981577272,'Χρήστος Γιαννάκος','Πάτμου 29');
-INSERT INTO "Collector" VALUES (6,6967077993,'Μπέλλα Ραφτοπούλου','Συντάγματος 21');
-INSERT INTO "Collector" VALUES (7,6939701682,'Ελένη Βακαλό','Σταδίου 209');
-INSERT INTO "Collector" VALUES (8,6949436796,'Άγγελος Γιαλλινάς','Αριστοτέλους 1');
-INSERT INTO "Collector" VALUES (9,6939781292,'Νανά Ησαΐα','Αγίου Βασιλείου 20');
-INSERT INTO "Collector" VALUES (10,6949286220,'Φρόσω Μενεγάκη','Ορεστιάδας 56');
-INSERT INTO "Product" VALUES (1,'Εικόνες','Άγιος Πέτρος (El Greco) - Μικρογραφία',25.0);
-INSERT INTO "Product" VALUES (2,'Εικόνες','Ελπίς',13.0);
-INSERT INTO "Product" VALUES (3,'Αξεσουάρ','Μπρελόκ Άγιος Πέτρος',8.0);
-INSERT INTO "Product" VALUES (4,'Φυλλάδιο','Έργα του Νικολάου Γύζη',0.0);
-INSERT INTO "Product" VALUES (5,'Φυλλάδιο','Έργα του Γιάννη Τσαρούχη',0.0);
-INSERT INTO "Product" VALUES (6,'Μινιατούρα','Επιτύμβια σύνθεση',10.0);
-INSERT INTO "Product" VALUES (7,'Μινιατούρα','Μίνι κεραμικό αγγείο',15.0);
-INSERT INTO "Product" VALUES (8,'Μινιατούρα','Σικελιανός - μινιατούρα',9.0);
-INSERT INTO "Product" VALUES (9,'Εικόνες','Εσθήρ Και Ασσοήρος',26.0);
-INSERT INTO "Product" VALUES (10,'Αξεσουάρ','Γυμνό',12.0);
-INSERT INTO "Product" VALUES (11,'Εικόνες','Αραπάκι',25.0);
-INSERT INTO "Product" VALUES (12,'Μινιατούρα','Ζεϊμπέκης',17.0);
-INSERT INTO "Product" VALUES (13,'Μινιατούρα','Άποψη Πάρκου',20.0);
-INSERT INTO "Product" VALUES (14,'Μινιατούρα','Άγιος Πέτρος',16.0);
-INSERT INTO "Product" VALUES (15,'Αξεσουάρ','Αντιγόνη Και Πολυνείκης',12.0);
-INSERT INTO "Product" VALUES (16,'Εικόνες','Πιατοθήκη',23.0);
-INSERT INTO "Product" VALUES (17,'Αξεσουάρ','Αναμονή',12.0);
-INSERT INTO "Product" VALUES (18,'Εικόνες','Ανδρικό Γυμνό (Γιωργάκης)',21.0);
-INSERT INTO "Product" VALUES (19,'Αξεσουάρ','Κασετίνα με την συναυλία των Αγγέλων',9.0);
-INSERT INTO "Product" VALUES (20,'Μινιατούρα','Αραγμένα Καράβια',10.0);
-INSERT INTO "Product" VALUES (21,'Μινιατούρα','Η Έξοδος Του Άρεως',10.0);
-INSERT INTO "Product" VALUES (22,'Αξεσουάρ','Πιάτο - Αρκαδικό Τοπίο',26.0);
-INSERT INTO "Product" VALUES (23,'Εικόνες','Γιάντες',23.0);
-INSERT INTO "Product" VALUES (24,'Μινιατούρα','Πορτραίτο Γέρου Άνδρα',11.0);
-INSERT INTO "Product" VALUES (25,'Αξεσουάρ','Τσάντα με την ανατολή από το λιμάνι της Χίου',13.0);
-INSERT INTO "Room" VALUES (1,'Δομήνικος Θεοτοκόπουλος',45,1,200);
-INSERT INTO "Room" VALUES (2,'Έλληνες της διασποράς',50,2,240);
-INSERT INTO "Room" VALUES (3,'Αίθουσα Περιοδικών Εκθέσεων',350,0,1000);
-INSERT INTO "Room" VALUES (4,'Αίθουσα υποδοχής',50,0,300);
-INSERT INTO "Exhibition" VALUES (1,'Ζωγραφική: Μόνιμη Έκθεση','Ζωγραφική','2020-12-5','2025-12-21','Μόνιμη έκθεση της Εθνικής Πινακοθήκης',1);
-INSERT INTO "Exhibition" VALUES (2,'ΕΠΑΝΑCΥΣΤΑΣΗ ''21: ΝΑΥΠΛΙΟ','Ελληνική Επανάσταση 1821','2021-5-22','2021-6-30','Η Εθνική Πινακοθήκη και Μουσείο Αλεξάνδρου Σούτσου-Παράρτημα Ναυπλίου και το Εθνικό Ιστορικό Μουσείο παρουσιάζουν στους χώρους του παραρτήματος την έκθεση ΕΠΑΝΑCΥΣΤΑΣΗ ''21: ΝΑΥΠΛΙΟ αναδεικνύοντας πτυχές της Επανάστασης του 1821, με έμφαση στα γεγονότα της Πελοποννήσου. Οι θεματικές της έκθεσης ακολουθούν την ιστορική αφήγηση της κεντρικής επετειακής έκθεσης του ΕΙΜ. Τα αντικείμενα από τις συλλογές του Εθνικού Ιστορικού Μουσείου και το πλούσιο αρχειακό υλικό, συνομιλώντας με τα ζωγραφικά έργα της μόνιμης έκθεσης της Πινακοθήκης Ναυπλίου, φωτίζουν πρόσωπα και γεγονότα από την προεπαναστατική περίοδο μέχρι και την έλευση του βασιλιά Όθωνα. Η έκθεση ξεκινά με το πολιτικό, κοινωνικό και ιδεολογικό πλαίσιο της εποχής, την κατάσταση στο εσωτερικό της Οθωμανικής Αυτοκρατορίας και την προετοιμασία της Ελληνικής Επανάστασης. Στην ενότητα αυτή εντάσσεται και το διαδραστικό έκθεμα της Χάρτας της Ελλάδος του Ρήγα Βελεστινλή, με το οποίο αναδεικνύεται η πνευματική προετοιμασία μέσα από το κίνημα του Νεοελληνικού Διαφωτισμού και των εκπροσώπων του και απαντά στο ερώτημα πώς ένας χάρτης, μπορεί να γίνει εθνεγερτικό μέσο. Ο Όρκος του Φιλικού μέσα από εμβληματικά έργα μεταφέρει το κλίμα, τον παλμό και την αφοσίωση όσων αφιερώθηκαν στην προετοιμασία της Επανάστασης. Ακολουθεί η έναρξη της Επανάσταση στη Μολδοβλαχία και στον ελλαδικό χώρο, ενώ παρουσιάζονται οι ιδιαιτερότητες των διαφόρων περιοχών όπου επικράτησε η Επανάσταση, σε σχέση με τα γεωγραφικά χαρακτηριστικά και την οικονομική τους ανάπτυξη. Ιδιαίτερη μνεία γίνεται στη διάδοση του Αγώνα σε όλες τις περιφέρειες της Πελοποννήσου και κυρίως στα γεγονότα του Ναυπλίου. Μία από τις αίθουσες είναι αφιερωμένη στους πρωταγωνιστές της Επανάστασης, με στόχο να αναδειχτούν οι διαφορετικοί κόσμοι που εκπροσωπεί ο καθένας και οι λόγοι που τους ένωσαν σε έναν κοινό σκοπό. Ανάμεσά τους, τιμώμενο πρόσωπο ο Θεόδωρος Κολοκοτρώνης που η πορεία του συνδέθηκε ιδιαίτερα  και με την πόλη του Ναυπλίου. Σε ειδικά διαμορφωμένο χώρο στον κάτω όροφο παρουσιάζεται η συμβολή του Τύπου στην ενίσχυση και διάδοση των ιδεών και των γεγονότων της Επανάστασης. Διαδραστικό έκθεμα επιτρέπει στον επισκέπτη να ξεφυλλίσει τις εφημερίδες της Επανάστασης Ελληνικά Χρονικά, Φίλος του Νόμου καθώς και τον ξένο τύπο της εποχής. Στον δεύτερο όροφο του κτηρίου ξεδιπλώνεται η συμβολή του Φιλελληνικού Κινήματος στην ενίσχυση του Αγώνα, καθώς και η διπλωματική πολιτική των Μεγάλων Δυνάμεων για την επίλυση του ελληνικού ζητήματος. Συγκεκριμένα παρουσιάζεται η μετάβαση από τη διεθνή καταδίκη στην αναγνώριση της Επανάστασης και στη ναυμαχία του Ναυαρίνου που προαναγγέλλει την κατάληξη του Aγώνα. Στη συνέχεια παρουσιάζονται οι προσπάθειες δημιουργίας πολιτικών θεσμών των επαναστατημένων Ελλήνων. Γίνεται επίσης αναφορά στη διακυβέρνηση του Καποδίστρια, στις εξελίξεις στο συνοριακό ζήτημα και στην προσφορά του ελληνικού θρόνου στον Όθωνα. Ακολουθεί η καθημερινή ζωή των αγωνιστών και του άμαχου πληθυσμού, η ανάπαυλα από τη μάχη, η ζωή των γυναικών και των παιδιών, που ενώ συνέχιζαν τις ενδοοικογενειακές ασχολίες διακρίθηκαν και στο πεδίο της μάχης. Στην τελευταία αίθουσα, μέσα από εμβληματικές ζωγραφικές συνθέσεις της μετεπαναταστικής περιόδου παρουσιάζονται αφενός ο πόλεμος στην ξηρά και στη θάλασσα και αφετέρου η ίδρυση του ελληνικού κράτους, η τύχη των αγωνιστών και η προσπάθεια διαμόρφωσης εθνικής ταυτότητας. Η έκθεση πραγματοποιήθηκε στο πλαίσιο της  Πρωτοβουλίας 1821-2021 και με την τεχνολογική υποστήριξη του Ιδρύματος Τεχνολογίας και Έρευνας (ΙΤΕ). Το διαδραστικό έκθεμα της Χάρτας του Ρήγα υλοποιήθηκε με τη στήριξη του Ιδρύματος Ιωάννου Φ. Κωστοπούλου.',0); 
-INSERT INTO "Exhibition" VALUES (3,'Έκθεση Χαρακτικής Ζαχαρία Αρβανίτη','Μεγαλογραφίες Αγωνιστών του ''21','2021-12-1','2022-3-28','Η έκθεση «Μεγαλογραφίες Αγωνιστών» περιλαμβάνει είκοσι χαρακτικά του Ζαχαρία Αρβανίτη, που απεικονίζουν ισάριθμα υπερμεγέθη πορτρέτα των κυριότερων πρωταγωνιστών του ΄21. Τον όρο «μεγαλογραφία» χρησιμοποίησε το 1844 ο τότε Πρωθυπουργός Ιωάννης Κωλέττης για να προσδιορίσει το μέγεθος της ζωγραφικής απεικόνισης του Γεώργιου Καραïσκάκη, που ζήτησε να του φιλοτεχνήσουν οι αδελφοί Γεώργιος και Φίλιππος Μαργαρίτης. Το υπερβάλλον μέγεθος, αλλά κυρίως το ήθος και η εκφραστική δύναμη που αποπνέουν οι προσωπογραφίες των Αγωνιστών, που χάραξε σε τεχνητό ξύλο MDF ο Ζαχαρίας Αρβανίτης, εξηγούν γιατί τις αποκαλέσαμε «μεγαλογραφίες».  Δεινός σχεδιαστής, ο καλλιτέχνης, επινοεί μια πρωτότυπη, ευλύγιστη και πυκνή χειρονομία χάραξης, ικανή να υπηρετήσει τις πλαστικές και  εκφραστικές απαιτήσεις αυτών των ιδιαίτερων έργων. Με όργανο το διεισδυτικό σχέδιο και τη δραματική χρήση του σκιοφωτισμού, τα αδρά πρόσωπα των Αγωνιστών μεταμορφώνονται σε ευανάγνωστη  εικόνα του χαρακτήρα, της ψυχής και της αγωνίας, που τους είχε κυριεύσει  σε μια στιγμή κρίσιμη για τον Αγώνα.',0);
-INSERT INTO "Exhibition" VALUES (4,'ΑΝΑΖΗΤΩΝΤΑΣ ΤΗΝ ΑΘΑΝΑΣΙΑ - Η ΤΕΧΝΗ ΤΟΥ ΠΟΡΤΡΑΙΤΟΥ ΣΤΙΣ ΣΥΛΛΟΓΕΣ ΤΟΥ ΛΟΥΒΡΟΥ','Πορτραίτα','2021-12-1','2022-3-28','Η νέα Εθνική Πινακοθήκη- Μουσείο Αλεξάνδρου Σούτσου εγκαινιάζει την εκθεσιακή της δραστηριότητα με μια επιβλητική  έκθεση αφιερωμένη στην «Τέχνη του πορτραίτου στις συλλογές του Λούβρου». Η έκθεση, που καλύπτει περισσότερα από 3000 χρόνια ιστορίας, ξεκινά από την πιο βαθιά αρχαιότητα, από τα βασίλεια της Μέσης Ανατολής και την Αίγυπτο, διατρέχει  την ελληνορωμαïκή περίοδο, με τα εμβληματικά πορτραίτα του Ομήρου, του Μεγάλου Αλεξάνδρου και του ρωμαίου αυτοκράτορα Τραïανού, για να καταλήξει   στα νεκρικά προσωπεία του Φαγιούμ.  Η επιλογή των έργων συνεχίζεται με την επικράτηση του Χριστιανισμού, όταν  ο ιδεαλισμός επικαλύπτει  την προσωπικότητα του ατόμου, για να μας οδηγήσει τελικά  στην θριαμβευτική ανάδυση του ανθρώπινης μορφής στα χρόνια της Αναγέννησης. Τέλος, διασχίζοντας το επιδεικτικό Μπαρόκ, με τα επίσημα πορτραίτα βασιλέων και ευγενών, αλλά και  με τις αιφνίδιες συνταρακτικές  ψυχολογικές παρεκβάσεις του, η έκθεση παρουσιάζει τους φιλοσόφους του Διαφωτισμού, αναφέρεται στην Γαλλική Επανάσταση με το συγκλονιστικό πορτραίτο του Ζακ Λουί Νταβίντ («Ο θάνατος του Μαρά»), αλλά και  στον Ναπολέοντα, αρχικά θριαμβευτή, στο αριστούργημα του Αντουάν Ζαν Γκρο «Ο Ναπολέων διασχίζει την Γέφυρα της Αρκόλης», και αργότερα ηττημένο και εξόριστο, με την συνταρακτική νεκρική του μάσκα. Τέλος η έκθεση φτάνει ως τα χρονικά όρια των συλλογών  του μουσείου του Λούβρου με χαρακτηριστικά έργα του Ένγκρ και του Ντελακρουά. Καμιά κοινωνική κατηγορία δεν απουσιάζει από αυτή την πλούσια συλλογή: γυναίκες, παιδιά, οικογένειες, αντιπροσωπεύονται με αριστουργήματα μεγάλων καλλιτεχνών. Ανάμεσα στους μεγάλους καλλιτέχνες θα συναντήσουμε τα ονόματα των Μποτιτσέλι, Βερονέζε, Γκρέκο, Βελάσκεθ, Ρέμπραντ, Γκόγια, Ρέινολτς,  Νταβίντ, Ένγκρ, Ντελακρουά κ.ά.   Είναι τα πρόσωπα της ιστορίας και η ίδια η ζωντανή ιστορία της τέχνης. Οι επιμελητές της έκθεσης επέλεξαν μιαν όχι γραμμική ιστορική παρουσίαση των έργων, αλλά μια θεματική οργάνωση του υλικού, με βάση κυρίως την κοινωνική λειτουργία του πορτραίτου σε κάθε εποχή. Κάθε εποχή αντιπροσωπεύεται από χαρακτηριστικά έργα που εικονογραφούν την λειτουργία και τον συμβολισμό του πορτραίτου την συγκεκριμένη περίοδο.',0);
-INSERT INTO "Exhibition" VALUES (5,'Δημήτριος Φιλιππότης Τήνιος εποίει','Γλυπτική','2019-8-1','2019-10-14','Η έκθεση περιλαμβάνει αυθεντικά έργα, προτομές σε μάρμαρο και γύψο και δύο εκμαγεία ταφικών μνημείων του Δημητρίου Φιλιππότηαπό τις συλλογές της ΕΠΜΑΣ, τα οποία παρουσιάζονται για πρώτη φορά στην Τήνο, πατρίδα του καλλιτέχνη. Οι προτομές, έργα της δεκαετίας του 1890, αποκαλύπτουν τη μετάβαση από τη νεοκλασική εξιδανίκευση στη ρεαλιστική προσωπογραφική απεικόνιση.Τα εκμαγεία της ανάγλυφης μορφής του Εμμανουήλ Ευστρατίου και της επιβλητικής Μαρίας Κασσιμάτη, από τα ταφικά μνημεία στο Α΄ Νεκροταφείο της Αθήνας, περιήλθαν στην ΕΠΜΑΣ το 1980χάρη στη συνεργασία του τότε διευθυντή Δημήτρη Παπαστάμου με τον τότε δήμαρχο της Αθήνας Δημήτρη Μπέη. Διασώζουν δύο μνημεία-ορόσημα στην ιστορία της νεοελληνικής ταφικής γλυπτικής, τα οποία συνδυάζουν τη ρεαλιστική απόδοση με τις νεοκλασικές αναφορές.',0);
-INSERT INTO "Exhibition" VALUES (6,'Τρία πληγωμένα έργα του Παρθένη','Κατεστραμμένα - συντηρημένα έργα','2017-7-2','2017-5-18','Από το σκοτάδι στο φως. Τρία πληγωμένα έργα του Παρθένη. Από το τραύμα στην επούλωση. Με αφορμή το θέμα της φετινής ημέρας των μουσείων: «Μουσεία και αμφιλεγόμενες ιστορίες: τα μουσεία μιλούν για εκείνα που δεν λέγονται» θα ανοίξει για το κοινό η έκθεση: Από το σκοτάδι στο φως. Τρία πληγωμένα έργα του Παρθένη. Από το τραύμα στην επούλωση. Η έκθεση συνοδεύεται από προβολή με θέμα την ιστορία των έργων που είχαν καταστραφεί από φωτιά στο σπίτι της κόρης του ζωγράφου το 1981. Η πρώτη συντήρηση έγινε από το Εργαστήριο Συντήρησης της Εθνικής Πινακοθήκης το διάστημα 1982-1985. Τα άλλα δύο έργα συντηρήθηκαν την περίοδο 2014-2016 μετά από μακροχρόνια έρευνα.',0);
-INSERT INTO "Exhibition" VALUES (7,'ΤΖΟΒΑΝΝΙ ΜΠΕΛΛΙΝΙ ΚΑΙ ΑΝΤΡΕΑ ΜΑΝΤΕΝΙΑ','Αναγέννηση','2020-4-1',NULL,'Χαιρετισμός, από τη Διευθύντρια της Εθνικής Πινακοθήκης κα Μαρίνα Λαμπράκη-Πλάκα, στον πολύπαθο λαό της Ιταλίας και ιδιαίτερα στους πολίτες του Μιλάνου, που φιλοξενεί αυτά τα αριστουργήματα στην διάσημη Πινακοθήκη της Μπρέρα. Με ευχές για ένα Πάσχα που θα φέρει ελπίδα και λύτρωση σε όλη την ανθρωπότητα. ',1);
-INSERT INTO "Exhibition" VALUES (8,'Ο ΘΑΝΑΤΟΣ ΚΑΙ ΤΑ ΠΑΘΗ ΤΟΥ ΧΡΙΣΤΟΥ ΣΤΟ ΕΡΓΟ ΤΟΥ ΕΛ ΓΚΡΕΚΟ','Ελ Γκρέκο','2021-1-1',NULL,'Ένα ταξίδι τέχνης, με θέμα το Θάνατο και τα Πάθη του Χριστού, μέσα από έργα του Δομήνικου Θεοτοκόπουλου (1541-1614) και ξεναγό τη διευθύντρια της Εθνικής Πινακοθήκης κα Μαρίνα Λαμπράκη-Πλάκα.',1);
-INSERT INTO "Exhibition" VALUES (9,'ΔΗΜΗΤΡΙΟΣ ΦΙΛΙΠΠΟΤΗΣ','Γλυπτική','2019-1-1',NULL,'Ο Δημήτριος Φιλιππότης ήταν ο πρώτος γλύπτης που ασχολήθηκε με ρεαλιστικά θέματα, με πρωταγωνιστές κυρίως παιδιά σε καθημερινές ασχολίες. Ξεκινώντας το 1869 με τον Θεριστή, εισήγαγε και καθιέρωσε τη ρεαλιστική θεματογραφία και απόδοση απέναντι στις μυθολογικές και αλληγορικές συνθέσεις και την ιδεαλιστική εξιδανίκευση του νεοκλασικισμού, που κυριαρχούσε στη νεοελληνική γλυπτική τον 19ο αιώνα. Στη συλλογή γλυπτικής της Εθνικής Πινακοθήκης περιλαμβάνονται έξι γλυπτά και δύο εκμαγεία ταφικών μνημείων του Δημητρίου Φιλιππότη. Τα έργα αυτά πρωταγωνιστούν σε όλες τις εκθέσεις του μουσείου, από την πρώτη παρουσίαση γλυπτών το 1954 στο Ζάππειο μέγαρο, και αποκαλύπτουν την καθοριστική συμβολή του στην εξέλιξη της νεοελληνικής γλυπτικής.','');
+DROP TABLE IF EXISTS "Worker";
+CREATE TABLE IF NOT EXISTS "Worker" (
+	"AFM"	integer NOT NULL CHECK("AFM" BETWEEN 100000 AND 999999),
+	"Full_Name"	string NOT NULL,
+	"Birth_date"	date NOT NULL CHECK("Birth_date" BETWEEN '1900-1-1' AND '2021-12-31'),
+	"Salary"	INTEGER NOT NULL CHECK("Salary" BETWEEN 0 AND 5000),
+	"Home_address"	string NOT NULL,
+	PRIMARY KEY("AFM" AUTOINCREMENT)
+);
 INSERT INTO "Takes_Place" VALUES (1,4);
 INSERT INTO "Takes_Place" VALUES (2,1);
 INSERT INTO "Takes_Place" VALUES (3,2);
@@ -263,34 +215,6 @@ INSERT INTO "Shown" VALUES (7,189);
 INSERT INTO "Shown" VALUES (7,3662);
 INSERT INTO "Shown" VALUES (7,137);
 INSERT INTO "Shown" VALUES (7,1493);
-INSERT INTO "Worker" VALUES (111111,'Γιώργος Γεωργίου','1981-5-3',1000,'Βότση 1');
-INSERT INTO "Worker" VALUES (117207,'Ιωάννης Παπαρόπουλος','1964-1-24',982,'Βενιζέλου 3');
-INSERT INTO "Worker" VALUES (123456,'Μάριος Πετρόπουλος','1971-4-29',1100,'Κορίνθου 190');
-INSERT INTO "Worker" VALUES (136570,'Μαρία Γερμανού','1967-4-6',1174,'Σκουφά 2');
-INSERT INTO "Worker" VALUES (149652,'Ελένη Σινωπίδη','1977-6-24',1561,'Αμβρακίας 50');
-INSERT INTO "Worker" VALUES (217238,'Δημήτρης Καραμπέτσος','1990-8-10',1427,'Μεσολογγίου 102');
-INSERT INTO "Worker" VALUES (222222,'Σοφία Πέτρου','1957-9-1',1250,'Αγίου Ανδρέου 15');
-INSERT INTO "Worker" VALUES (225447,'Κωνσταντίνος Γεωργιάδης','1986-2-14',1175,'Νίκαιας 20');
-INSERT INTO "Worker" VALUES (269964,'Γεωργία Αθανασοπούλου','1988-6-19',1611,'Σουνίου 30');
-INSERT INTO "Worker" VALUES (305540,'Αναστασία Γκίκα','1967-5-14',1794,'Μαιζώνος 50');
-INSERT INTO "Worker" VALUES (394594,'Ευαγγελία Αλαφούζου','1961-10-2',1161,'Κορίνθου 19');
-INSERT INTO "Worker" VALUES (407927,'Ιωάννα Ακρίτα','1976-7-15',945,'Βότσαρη 18');
-INSERT INTO "Worker" VALUES (420638,'Δήμητρα Σακελλαρίου','1981-7-24',1393,'Καραϊσκάκη 13');
-INSERT INTO "Worker" VALUES (426006,'Ειρήνη Ράπτη','1997-7-26',1460,'Δερβενακίων 30');
-INSERT INTO "Worker" VALUES (474620,'Χρήστος Καζάκος','1967-1-28',1277,'Ρούφου 63');
-INSERT INTO "Worker" VALUES (546318,'Παναγιώτα Ηλιάδη','1981-12-13',1015,'Αράτου 95');
-INSERT INTO "Worker" VALUES (640877,'Χριστίνα Ψωμιάδη','1995-6-3',1657,'Ηλείας 50');
-INSERT INTO "Worker" VALUES (647405,'Παναγιώτης Φύσσας','1975-9-12',1676,'Αμερικής 81');
-INSERT INTO "Worker" VALUES (693663,'Βασίλειος Χατζηπαύλου','1977-2-3',1634,'Κύπρου 34');
-INSERT INTO "Worker" VALUES (737186,'Κωνσταντίνα Χριστοπούλου','1996-11-4',1170,'Φαβιέρου 45');
-INSERT INTO "Worker" VALUES (874834,'Άννα Ιορδανίδου','1972-10-18',1736,'Δήλου 21');
-INSERT INTO "Worker" VALUES (919288,'Αγγελική Δημακοπούλου','1988-2-21',1157,'Αθηνών 201');
-INSERT INTO "Worker" VALUES (926327,'Αθανάσιος Καλύβας','1971-5-9',1211,'Σάμης 92');
-INSERT INTO "Worker" VALUES (942935,'Δέσποινα Μανωλά','1974-5-10',1178,'Ναυπάκου 83');
-INSERT INTO "Worker" VALUES (973070,'Παρασκευή Παπανδρέου','1977-2-23',1326,'Παύλου Μελά 9');
-INSERT INTO "Worker" VALUES (973439,'Φωτεινή Οικονόμου','1964-8-10',955,'Αρόης 76');
-INSERT INTO "Worker" VALUES (977754,'Αλεξάνδρα Μιχαηλίδη','1999-8-13',1113,'Καλαβρύτων 82');
-INSERT INTO "Worker" VALUES (995240,'Ευάγγελος Αποστολόπουλος','1972-6-2',1784,'Πανεπιστημίου 38');
 INSERT INTO "Under_maint" VALUES (2,9027);
 INSERT INTO "Under_maint" VALUES (1,152);
 INSERT INTO "Under_maint" VALUES (3,1791);
@@ -304,6 +228,127 @@ INSERT INTO "Under_maint" VALUES (10,1851);
 INSERT INTO "Under_maint" VALUES (11,368);
 INSERT INTO "Under_maint" VALUES (12,2597);
 INSERT INTO "Under_maint" VALUES (13,6179);
+INSERT INTO "Physical" VALUES (1);
+INSERT INTO "Physical" VALUES (2);
+INSERT INTO "Physical" VALUES (3);
+INSERT INTO "Physical" VALUES (4);
+INSERT INTO "Physical" VALUES (5);
+INSERT INTO "Physical" VALUES (6);
+INSERT INTO "Online" VALUES (7,'https://www.nationalgallery.gr/el/psiphiakes-parousiaseis/museum/giovanni-bellini-andrea-mantegna-dyo-anagennisiakes-eikones-tou-theiou-pathous.html','Ομάδα IT');
+INSERT INTO "Online" VALUES (8,'https://www.nationalgallery.gr/el/psiphiakes-parousiaseis/museum/o-thanatos-sto-ergo-tou-greko.html','Ομάδα IT');
+INSERT INTO "Online" VALUES (9,'https://www.nationalgallery.gr/el/psiphiakes-parousiaseis/museum/dimitrios-filippotis-1.html','Ομάδα IT');
+INSERT INTO "Inspired_by" VALUES (9027,1);
+INSERT INTO "Inspired_by" VALUES (119,4);
+INSERT INTO "Inspired_by" VALUES (602,4);
+INSERT INTO "Inspired_by" VALUES (607,4);
+INSERT INTO "Inspired_by" VALUES (618,4);
+INSERT INTO "Inspired_by" VALUES (635,4);
+INSERT INTO "Inspired_by" VALUES (1858,4);
+INSERT INTO "Inspired_by" VALUES (3395,5);
+INSERT INTO "Inspired_by" VALUES (3497,5);
+INSERT INTO "Inspired_by" VALUES (3498,5);
+INSERT INTO "Inspired_by" VALUES (4961,5);
+INSERT INTO "Inspired_by" VALUES (6178,5);
+INSERT INTO "Inspired_by" VALUES (6179,5);
+INSERT INTO "Inspired_by" VALUES (6180,5);
+INSERT INTO "Inspired_by" VALUES (10606,5);
+INSERT INTO "Inspired_by" VALUES (4961,2);
+INSERT INTO "Inspired_by" VALUES (9027,3);
+INSERT INTO "Inspired_by" VALUES (12744,6);
+INSERT INTO "Inspired_by" VALUES (12776,7);
+INSERT INTO "Inspired_by" VALUES (12918,8);
+INSERT INTO "Inspired_by" VALUES (137,9);
+INSERT INTO "Inspired_by" VALUES (3033,10);
+INSERT INTO "Inspired_by" VALUES (100,11);
+INSERT INTO "Inspired_by" VALUES (10412,12);
+INSERT INTO "Inspired_by" VALUES (10606,13);
+INSERT INTO "Inspired_by" VALUES (9027,14);
+INSERT INTO "Inspired_by" VALUES (3578,15);
+INSERT INTO "Inspired_by" VALUES (607,16);
+INSERT INTO "Inspired_by" VALUES (69,17);
+INSERT INTO "Inspired_by" VALUES (11371,18);
+INSERT INTO "Inspired_by" VALUES (152,19);
+INSERT INTO "Inspired_by" VALUES (642,20);
+INSERT INTO "Inspired_by" VALUES (368,21);
+INSERT INTO "Inspired_by" VALUES (119,23);
+INSERT INTO "Inspired_by" VALUES (3518,24);
+INSERT INTO "Inspired_by" VALUES (6180,25);
+INSERT INTO "Is_Presented" VALUES (1,2);
+INSERT INTO "Is_Presented" VALUES (1,1);
+INSERT INTO "Is_Presented" VALUES (2,1);
+INSERT INTO "Is_Presented" VALUES (3,1);
+INSERT INTO "Is_Presented" VALUES (3,2);
+INSERT INTO "Is_Presented" VALUES (3,5);
+INSERT INTO "Is_Presented" VALUES (4,1);
+INSERT INTO "Is_Presented" VALUES (4,2);
+INSERT INTO "Is_Presented" VALUES (4,3);
+INSERT INTO "Is_Presented" VALUES (5,1);
+INSERT INTO "Is_Presented" VALUES (5,2);
+INSERT INTO "Is_Presented" VALUES (5,3);
+INSERT INTO "Is_Presented" VALUES (5,4);
+INSERT INTO "Is_Presented" VALUES (5,5);
+INSERT INTO "Is_Presented" VALUES (5,6);
+INSERT INTO "Is_Presented" VALUES (6,1);
+INSERT INTO "Is_Presented" VALUES (6,2);
+INSERT INTO "Is_Presented" VALUES (6,3);
+INSERT INTO "Is_Presented" VALUES (6,5);
+INSERT INTO "Is_Presented" VALUES (7,1);
+INSERT INTO "Is_Presented" VALUES (7,2);
+INSERT INTO "Is_Presented" VALUES (7,3);
+INSERT INTO "Is_Presented" VALUES (7,4);
+INSERT INTO "Is_Presented" VALUES (7,5);
+INSERT INTO "Is_Presented" VALUES (7,6);
+INSERT INTO "Is_Presented" VALUES (8,1);
+INSERT INTO "Is_Presented" VALUES (8,2);
+INSERT INTO "Is_Presented" VALUES (8,3);
+INSERT INTO "Is_Presented" VALUES (9,4);
+INSERT INTO "Is_Presented" VALUES (10,5);
+INSERT INTO "Is_Presented" VALUES (11,6);
+INSERT INTO "Is_Presented" VALUES (12,1);
+INSERT INTO "Is_Presented" VALUES (13,2);
+INSERT INTO "Is_Presented" VALUES (14,3);
+INSERT INTO "Is_Presented" VALUES (15,4);
+INSERT INTO "Is_Presented" VALUES (16,5);
+INSERT INTO "Is_Presented" VALUES (17,6);
+INSERT INTO "Is_Presented" VALUES (18,1);
+INSERT INTO "Is_Presented" VALUES (19,1);
+INSERT INTO "Is_Presented" VALUES (20,1);
+INSERT INTO "Is_Presented" VALUES (21,1);
+INSERT INTO "Is_Presented" VALUES (22,1);
+INSERT INTO "Is_Presented" VALUES (23,1);
+INSERT INTO "Is_Presented" VALUES (24,1);
+INSERT INTO "Is_Presented" VALUES (25,1);
+INSERT INTO "Is_Presented" VALUES (25,2);
+INSERT INTO "Is_Presented" VALUES (25,3);
+INSERT INTO "Is_Presented" VALUES (25,4);
+INSERT INTO "Is_Presented" VALUES (25,5);
+INSERT INTO "Is_Presented" VALUES (25,6);
+INSERT INTO "Collection" VALUES (0,'Unknown','Δεν υπάρχουν πληροφορίες για την συγκεκριμένη συλλογή',111111);
+INSERT INTO "Collection" VALUES (1,'Νεοελληνική Ζωγραφική','Μετά την άλωση της Κωνσταντινουπόλεως (1453), η βυζαντινή καλλιτεχνική παράδοση συνεχίζεται σε νέα κέντρα που δημιουργούνται εκτός της οθωμανικής επικράτειας και κυρίως στην ενετοκρατούμενη Κρήτη. Οι εικόνες της Κρητικής Σχολής ήταν ξακουστές και περιζήτητες και πέρα από τα όρια του νησιού. Πολλοί από τους ζωγράφους της Κρητικής Σχολής ήταν «δίγλωσσοι», αφού μπορούσαν να ζωγραφίζουν και alla greca, με βυζαντινή τεχνοτροπία, και alla latina, δηλαδή με το αναγεννησιακό ύφος. Μετά την άλωση του Χάνδακα από τους Τούρκους το 1669, πολλοί καλλιτέχνες θα βρουν καταφύγιο στα ενετοκρατούμενα Επτάνησα. Σιγά σιγά όμως, καθώς οι σχέσεις με τη Βενετία γίνονται στενότερες, το βυζαντινό ιδίωμα υποχωρεί και επικρατεί η δυτική τεχνοτροπία. Η ζωγραφική από ιδεαλιστική τείνει να γίνει ρεαλιστική, από υπερβατική, εγκόσμια, από επίπεδη, τριδιάστατη.',123456);
+INSERT INTO "Collection" VALUES (2,'Δυτικοευρωπαϊκή Ζωγραφική','Δεν υπάρχουν πληροφορίες για την συγκεκριμένη συλλογή',693663);
+INSERT INTO "Collection" VALUES (3,'Νεοελληνική & Ευρωπαϊκή Χαρακτική','Δεν υπάρχουν πληροφορίες για την συγκεκριμένη συλλογή',269964);
+INSERT INTO "Collection" VALUES (4,'Νεοελληνική & Ευρωπαϊκή Γλυπτική','Δεν υπάρχουν πληροφορίες για την συγκεκριμένη συλλογή',111111);
+INSERT INTO "Collection" VALUES (5,'Διακοσημτικές & Εφαρμοσμένες Τέχνες','Δεν υπάρχουν πληροφορίες για την συγκεκριμένη συλλογή',942935);
+INSERT INTO "Collection" VALUES (6,'Φωτογραφικό & Ιστορικό Αρχείο','Δεν υπάρχουν πληροφορίες για την συγκεκριμένη συλλογή',420638);
+INSERT INTO "Collector" VALUES (1,6912345678,'Αικατερίνη Ροδοκανάκη','Κωστή Παλαμά 100');
+INSERT INTO "Collector" VALUES (2,2101111111,'Γρηγόριος Μαρασλής','Ελύτη 50');
+INSERT INTO "Collector" VALUES (3,6923456789,'Ματθαίος Ρενιέρης','Πανεπιστημίου 10');
+INSERT INTO "Collector" VALUES (4,6935490029,'Μαριλένα Λιακοπούλου','Σύρου 3');
+INSERT INTO "Collector" VALUES (5,6981577272,'Χρήστος Γιαννάκος','Πάτμου 29');
+INSERT INTO "Collector" VALUES (6,6967077993,'Μπέλλα Ραφτοπούλου','Συντάγματος 21');
+INSERT INTO "Collector" VALUES (7,6939701682,'Ελένη Βακαλό','Σταδίου 209');
+INSERT INTO "Collector" VALUES (8,6949436796,'Άγγελος Γιαλλινάς','Αριστοτέλους 1');
+INSERT INTO "Collector" VALUES (9,6939781292,'Νανά Ησαΐα','Αγίου Βασιλείου 20');
+INSERT INTO "Collector" VALUES (10,6949286220,'Φρόσω Μενεγάκη','Ορεστιάδας 56');
+INSERT INTO "Exhibition" VALUES (1,'Ζωγραφική: Μόνιμη Έκθεση','Ζωγραφική','2020-12-5','2025-12-21','Μόνιμη έκθεση της Εθνικής Πινακοθήκης',1);
+INSERT INTO "Exhibition" VALUES (2,'ΕΠΑΝΑCΥΣΤΑΣΗ ''21: ΝΑΥΠΛΙΟ','Ελληνική Επανάσταση 1821','2021-5-22','2021-6-30','Η Εθνική Πινακοθήκη και Μουσείο Αλεξάνδρου Σούτσου-Παράρτημα Ναυπλίου και το Εθνικό Ιστορικό Μουσείο παρουσιάζουν στους χώρους του παραρτήματος την έκθεση ΕΠΑΝΑCΥΣΤΑΣΗ ''21: ΝΑΥΠΛΙΟ αναδεικνύοντας πτυχές της Επανάστασης του 1821, με έμφαση στα γεγονότα της Πελοποννήσου. Οι θεματικές της έκθεσης ακολουθούν την ιστορική αφήγηση της κεντρικής επετειακής έκθεσης του ΕΙΜ. Τα αντικείμενα από τις συλλογές του Εθνικού Ιστορικού Μουσείου και το πλούσιο αρχειακό υλικό, συνομιλώντας με τα ζωγραφικά έργα της μόνιμης έκθεσης της Πινακοθήκης Ναυπλίου, φωτίζουν πρόσωπα και γεγονότα από την προεπαναστατική περίοδο μέχρι και την έλευση του βασιλιά Όθωνα. Η έκθεση ξεκινά με το πολιτικό, κοινωνικό και ιδεολογικό πλαίσιο της εποχής, την κατάσταση στο εσωτερικό της Οθωμανικής Αυτοκρατορίας και την προετοιμασία της Ελληνικής Επανάστασης. Στην ενότητα αυτή εντάσσεται και το διαδραστικό έκθεμα της Χάρτας της Ελλάδος του Ρήγα Βελεστινλή, με το οποίο αναδεικνύεται η πνευματική προετοιμασία μέσα από το κίνημα του Νεοελληνικού Διαφωτισμού και των εκπροσώπων του και απαντά στο ερώτημα πώς ένας χάρτης, μπορεί να γίνει εθνεγερτικό μέσο. Ο Όρκος του Φιλικού μέσα από εμβληματικά έργα μεταφέρει το κλίμα, τον παλμό και την αφοσίωση όσων αφιερώθηκαν στην προετοιμασία της Επανάστασης. Ακολουθεί η έναρξη της Επανάσταση στη Μολδοβλαχία και στον ελλαδικό χώρο, ενώ παρουσιάζονται οι ιδιαιτερότητες των διαφόρων περιοχών όπου επικράτησε η Επανάσταση, σε σχέση με τα γεωγραφικά χαρακτηριστικά και την οικονομική τους ανάπτυξη. Ιδιαίτερη μνεία γίνεται στη διάδοση του Αγώνα σε όλες τις περιφέρειες της Πελοποννήσου και κυρίως στα γεγονότα του Ναυπλίου. Μία από τις αίθουσες είναι αφιερωμένη στους πρωταγωνιστές της Επανάστασης, με στόχο να αναδειχτούν οι διαφορετικοί κόσμοι που εκπροσωπεί ο καθένας και οι λόγοι που τους ένωσαν σε έναν κοινό σκοπό. Ανάμεσά τους, τιμώμενο πρόσωπο ο Θεόδωρος Κολοκοτρώνης που η πορεία του συνδέθηκε ιδιαίτερα  και με την πόλη του Ναυπλίου. Σε ειδικά διαμορφωμένο χώρο στον κάτω όροφο παρουσιάζεται η συμβολή του Τύπου στην ενίσχυση και διάδοση των ιδεών και των γεγονότων της Επανάστασης. Διαδραστικό έκθεμα επιτρέπει στον επισκέπτη να ξεφυλλίσει τις εφημερίδες της Επανάστασης Ελληνικά Χρονικά, Φίλος του Νόμου καθώς και τον ξένο τύπο της εποχής. Στον δεύτερο όροφο του κτηρίου ξεδιπλώνεται η συμβολή του Φιλελληνικού Κινήματος στην ενίσχυση του Αγώνα, καθώς και η διπλωματική πολιτική των Μεγάλων Δυνάμεων για την επίλυση του ελληνικού ζητήματος. Συγκεκριμένα παρουσιάζεται η μετάβαση από τη διεθνή καταδίκη στην αναγνώριση της Επανάστασης και στη ναυμαχία του Ναυαρίνου που προαναγγέλλει την κατάληξη του Aγώνα. Στη συνέχεια παρουσιάζονται οι προσπάθειες δημιουργίας πολιτικών θεσμών των επαναστατημένων Ελλήνων. Γίνεται επίσης αναφορά στη διακυβέρνηση του Καποδίστρια, στις εξελίξεις στο συνοριακό ζήτημα και στην προσφορά του ελληνικού θρόνου στον Όθωνα. Ακολουθεί η καθημερινή ζωή των αγωνιστών και του άμαχου πληθυσμού, η ανάπαυλα από τη μάχη, η ζωή των γυναικών και των παιδιών, που ενώ συνέχιζαν τις ενδοοικογενειακές ασχολίες διακρίθηκαν και στο πεδίο της μάχης. Στην τελευταία αίθουσα, μέσα από εμβληματικές ζωγραφικές συνθέσεις της μετεπαναταστικής περιόδου παρουσιάζονται αφενός ο πόλεμος στην ξηρά και στη θάλασσα και αφετέρου η ίδρυση του ελληνικού κράτους, η τύχη των αγωνιστών και η προσπάθεια διαμόρφωσης εθνικής ταυτότητας. Η έκθεση πραγματοποιήθηκε στο πλαίσιο της  Πρωτοβουλίας 1821-2021 και με την τεχνολογική υποστήριξη του Ιδρύματος Τεχνολογίας και Έρευνας (ΙΤΕ). Το διαδραστικό έκθεμα της Χάρτας του Ρήγα υλοποιήθηκε με τη στήριξη του Ιδρύματος Ιωάννου Φ. Κωστοπούλου.',0);
+INSERT INTO "Exhibition" VALUES (3,'Έκθεση Χαρακτικής Ζαχαρία Αρβανίτη','Μεγαλογραφίες Αγωνιστών του ''21','2021-12-1','2022-3-28','Η έκθεση «Μεγαλογραφίες Αγωνιστών» περιλαμβάνει είκοσι χαρακτικά του Ζαχαρία Αρβανίτη, που απεικονίζουν ισάριθμα υπερμεγέθη πορτρέτα των κυριότερων πρωταγωνιστών του ΄21. Τον όρο «μεγαλογραφία» χρησιμοποίησε το 1844 ο τότε Πρωθυπουργός Ιωάννης Κωλέττης για να προσδιορίσει το μέγεθος της ζωγραφικής απεικόνισης του Γεώργιου Καραïσκάκη, που ζήτησε να του φιλοτεχνήσουν οι αδελφοί Γεώργιος και Φίλιππος Μαργαρίτης. Το υπερβάλλον μέγεθος, αλλά κυρίως το ήθος και η εκφραστική δύναμη που αποπνέουν οι προσωπογραφίες των Αγωνιστών, που χάραξε σε τεχνητό ξύλο MDF ο Ζαχαρίας Αρβανίτης, εξηγούν γιατί τις αποκαλέσαμε «μεγαλογραφίες».  Δεινός σχεδιαστής, ο καλλιτέχνης, επινοεί μια πρωτότυπη, ευλύγιστη και πυκνή χειρονομία χάραξης, ικανή να υπηρετήσει τις πλαστικές και  εκφραστικές απαιτήσεις αυτών των ιδιαίτερων έργων. Με όργανο το διεισδυτικό σχέδιο και τη δραματική χρήση του σκιοφωτισμού, τα αδρά πρόσωπα των Αγωνιστών μεταμορφώνονται σε ευανάγνωστη  εικόνα του χαρακτήρα, της ψυχής και της αγωνίας, που τους είχε κυριεύσει  σε μια στιγμή κρίσιμη για τον Αγώνα.',0);
+INSERT INTO "Exhibition" VALUES (4,'ΑΝΑΖΗΤΩΝΤΑΣ ΤΗΝ ΑΘΑΝΑΣΙΑ - Η ΤΕΧΝΗ ΤΟΥ ΠΟΡΤΡΑΙΤΟΥ ΣΤΙΣ ΣΥΛΛΟΓΕΣ ΤΟΥ ΛΟΥΒΡΟΥ','Πορτραίτα','2021-12-1','2022-3-28','Η νέα Εθνική Πινακοθήκη- Μουσείο Αλεξάνδρου Σούτσου εγκαινιάζει την εκθεσιακή της δραστηριότητα με μια επιβλητική  έκθεση αφιερωμένη στην «Τέχνη του πορτραίτου στις συλλογές του Λούβρου». Η έκθεση, που καλύπτει περισσότερα από 3000 χρόνια ιστορίας, ξεκινά από την πιο βαθιά αρχαιότητα, από τα βασίλεια της Μέσης Ανατολής και την Αίγυπτο, διατρέχει  την ελληνορωμαïκή περίοδο, με τα εμβληματικά πορτραίτα του Ομήρου, του Μεγάλου Αλεξάνδρου και του ρωμαίου αυτοκράτορα Τραïανού, για να καταλήξει   στα νεκρικά προσωπεία του Φαγιούμ.  Η επιλογή των έργων συνεχίζεται με την επικράτηση του Χριστιανισμού, όταν  ο ιδεαλισμός επικαλύπτει  την προσωπικότητα του ατόμου, για να μας οδηγήσει τελικά  στην θριαμβευτική ανάδυση του ανθρώπινης μορφής στα χρόνια της Αναγέννησης. Τέλος, διασχίζοντας το επιδεικτικό Μπαρόκ, με τα επίσημα πορτραίτα βασιλέων και ευγενών, αλλά και  με τις αιφνίδιες συνταρακτικές  ψυχολογικές παρεκβάσεις του, η έκθεση παρουσιάζει τους φιλοσόφους του Διαφωτισμού, αναφέρεται στην Γαλλική Επανάσταση με το συγκλονιστικό πορτραίτο του Ζακ Λουί Νταβίντ («Ο θάνατος του Μαρά»), αλλά και  στον Ναπολέοντα, αρχικά θριαμβευτή, στο αριστούργημα του Αντουάν Ζαν Γκρο «Ο Ναπολέων διασχίζει την Γέφυρα της Αρκόλης», και αργότερα ηττημένο και εξόριστο, με την συνταρακτική νεκρική του μάσκα. Τέλος η έκθεση φτάνει ως τα χρονικά όρια των συλλογών  του μουσείου του Λούβρου με χαρακτηριστικά έργα του Ένγκρ και του Ντελακρουά. Καμιά κοινωνική κατηγορία δεν απουσιάζει από αυτή την πλούσια συλλογή: γυναίκες, παιδιά, οικογένειες, αντιπροσωπεύονται με αριστουργήματα μεγάλων καλλιτεχνών. Ανάμεσα στους μεγάλους καλλιτέχνες θα συναντήσουμε τα ονόματα των Μποτιτσέλι, Βερονέζε, Γκρέκο, Βελάσκεθ, Ρέμπραντ, Γκόγια, Ρέινολτς,  Νταβίντ, Ένγκρ, Ντελακρουά κ.ά.   Είναι τα πρόσωπα της ιστορίας και η ίδια η ζωντανή ιστορία της τέχνης. Οι επιμελητές της έκθεσης επέλεξαν μιαν όχι γραμμική ιστορική παρουσίαση των έργων, αλλά μια θεματική οργάνωση του υλικού, με βάση κυρίως την κοινωνική λειτουργία του πορτραίτου σε κάθε εποχή. Κάθε εποχή αντιπροσωπεύεται από χαρακτηριστικά έργα που εικονογραφούν την λειτουργία και τον συμβολισμό του πορτραίτου την συγκεκριμένη περίοδο.',0);
+INSERT INTO "Exhibition" VALUES (5,'Δημήτριος Φιλιππότης Τήνιος εποίει','Γλυπτική','2019-8-1','2019-10-14','Η έκθεση περιλαμβάνει αυθεντικά έργα, προτομές σε μάρμαρο και γύψο και δύο εκμαγεία ταφικών μνημείων του Δημητρίου Φιλιππότηαπό τις συλλογές της ΕΠΜΑΣ, τα οποία παρουσιάζονται για πρώτη φορά στην Τήνο, πατρίδα του καλλιτέχνη. Οι προτομές, έργα της δεκαετίας του 1890, αποκαλύπτουν τη μετάβαση από τη νεοκλασική εξιδανίκευση στη ρεαλιστική προσωπογραφική απεικόνιση.Τα εκμαγεία της ανάγλυφης μορφής του Εμμανουήλ Ευστρατίου και της επιβλητικής Μαρίας Κασσιμάτη, από τα ταφικά μνημεία στο Α΄ Νεκροταφείο της Αθήνας, περιήλθαν στην ΕΠΜΑΣ το 1980χάρη στη συνεργασία του τότε διευθυντή Δημήτρη Παπαστάμου με τον τότε δήμαρχο της Αθήνας Δημήτρη Μπέη. Διασώζουν δύο μνημεία-ορόσημα στην ιστορία της νεοελληνικής ταφικής γλυπτικής, τα οποία συνδυάζουν τη ρεαλιστική απόδοση με τις νεοκλασικές αναφορές.',0);
+INSERT INTO "Exhibition" VALUES (6,'Τρία πληγωμένα έργα του Παρθένη','Κατεστραμμένα - συντηρημένα έργα','2017-7-2','2017-5-18','Από το σκοτάδι στο φως. Τρία πληγωμένα έργα του Παρθένη. Από το τραύμα στην επούλωση. Με αφορμή το θέμα της φετινής ημέρας των μουσείων: «Μουσεία και αμφιλεγόμενες ιστορίες: τα μουσεία μιλούν για εκείνα που δεν λέγονται» θα ανοίξει για το κοινό η έκθεση: Από το σκοτάδι στο φως. Τρία πληγωμένα έργα του Παρθένη. Από το τραύμα στην επούλωση. Η έκθεση συνοδεύεται από προβολή με θέμα την ιστορία των έργων που είχαν καταστραφεί από φωτιά στο σπίτι της κόρης του ζωγράφου το 1981. Η πρώτη συντήρηση έγινε από το Εργαστήριο Συντήρησης της Εθνικής Πινακοθήκης το διάστημα 1982-1985. Τα άλλα δύο έργα συντηρήθηκαν την περίοδο 2014-2016 μετά από μακροχρόνια έρευνα.',0);
+INSERT INTO "Exhibition" VALUES (7,'ΤΖΟΒΑΝΝΙ ΜΠΕΛΛΙΝΙ ΚΑΙ ΑΝΤΡΕΑ ΜΑΝΤΕΝΙΑ','Αναγέννηση','2020-4-1',NULL,'Χαιρετισμός, από τη Διευθύντρια της Εθνικής Πινακοθήκης κα Μαρίνα Λαμπράκη-Πλάκα, στον πολύπαθο λαό της Ιταλίας και ιδιαίτερα στους πολίτες του Μιλάνου, που φιλοξενεί αυτά τα αριστουργήματα στην διάσημη Πινακοθήκη της Μπρέρα. Με ευχές για ένα Πάσχα που θα φέρει ελπίδα και λύτρωση σε όλη την ανθρωπότητα. ',1);
+INSERT INTO "Exhibition" VALUES (8,'Ο ΘΑΝΑΤΟΣ ΚΑΙ ΤΑ ΠΑΘΗ ΤΟΥ ΧΡΙΣΤΟΥ ΣΤΟ ΕΡΓΟ ΤΟΥ ΕΛ ΓΚΡΕΚΟ','Ελ Γκρέκο','2021-1-1',NULL,'Ένα ταξίδι τέχνης, με θέμα το Θάνατο και τα Πάθη του Χριστού, μέσα από έργα του Δομήνικου Θεοτοκόπουλου (1541-1614) και ξεναγό τη διευθύντρια της Εθνικής Πινακοθήκης κα Μαρίνα Λαμπράκη-Πλάκα.',1);
+INSERT INTO "Exhibition" VALUES (9,'ΔΗΜΗΤΡΙΟΣ ΦΙΛΙΠΠΟΤΗΣ','Γλυπτική','2019-1-1',NULL,'Ο Δημήτριος Φιλιππότης ήταν ο πρώτος γλύπτης που ασχολήθηκε με ρεαλιστικά θέματα, με πρωταγωνιστές κυρίως παιδιά σε καθημερινές ασχολίες. Ξεκινώντας το 1869 με τον Θεριστή, εισήγαγε και καθιέρωσε τη ρεαλιστική θεματογραφία και απόδοση απέναντι στις μυθολογικές και αλληγορικές συνθέσεις και την ιδεαλιστική εξιδανίκευση του νεοκλασικισμού, που κυριαρχούσε στη νεοελληνική γλυπτική τον 19ο αιώνα. Στη συλλογή γλυπτικής της Εθνικής Πινακοθήκης περιλαμβάνονται έξι γλυπτά και δύο εκμαγεία ταφικών μνημείων του Δημητρίου Φιλιππότη. Τα έργα αυτά πρωταγωνιστούν σε όλες τις εκθέσεις του μουσείου, από την πρώτη παρουσίαση γλυπτών το 1954 στο Ζάππειο μέγαρο, και αποκαλύπτουν την καθοριστική συμβολή του στην εξέλιξη της νεοελληνικής γλυπτικής.','');
 INSERT INTO "Artist" VALUES (1,'Antonio Carracci','2021-12-25 15:47',1513,1618,'Γιός του Agostino Carracci. ','Βενετία','Ρώμη','Α');
 INSERT INTO "Artist" VALUES (2,'Lievens Jan','2021-12-25 15:52',1607,1674,'Ολλανδός ζωγράφος και χαράκτης. Δέχτηκε έντονες επιδράσεις από τον Ρέμπραντ. Ζωγράφισε κυρίως πορτρέτα και θρησκευτικές σκηνές. ','Ολλανδία','Ολλανδία','Α');
 INSERT INTO "Artist" VALUES (3,'Δομήνικος Θεοτοκόπουλος (El Greco)','2021-12-25 15:56',1541,1614,'Ελάχιστα στοιχεία είναι γνωστά για την περίοδο της ζωής του ζωγράφου στον βενετοκρατούμενο Χάνδακα, αρκετά αξιόλογο τοπικό καλλιτεχνικό κέντρο κατά τον 16ο αιώνα. Η χρονολογία γέννησής του συνάγεται από μαρτυρία του ίδιου κατά τη διάρκεια δίκης το 1606, σύμφωνα με την οποία ήταν τότε εξήντα πέντε ετών, ενώ γνωρίζουμε ότι το 1563 ήταν ήδη μαΐστρος, δηλαδή τελειωμένος ζωγράφος που ασκούσε επαγγελματικά την τέχνη του. Από την πρώτη αυτή εποχή της καλλιτεχνικής του δημιουργίας προέρχονται οι ενυπόγραφες εικόνες του Ευαγγελιστή Λουκά που ζωγραφίζει τη βρεφοκρατούσα Παναγία, της Προσκύνησης των Μάγων (Αθήνα, Μουσείο Μπενάκη) και της Κοίμησης της Θεοτόκου (Ερμούπολη Σύρου, Ναός Κοίμησης της Θεοτόκου), στις οποίες διαπιστώνεται η εξοικείωση του ζωγράφου με τύπους τόσο της ορθόδοξης όσο και της δυτικής παράδοσης. Το 1567 ή το 1568 αναχώρησε από την Κρήτη για την Ιταλία, όπου παρέμεινε, αρχικά στη Βενετία και αργότερα, από το 1570, στη Ρώμη, επί μία δεκαετία περίπου. Στη Βενετία γνώρισε το έργο των μεγάλων δασκάλων της εποχής, του ηλικιωμένου Tiziano, του Tintoretto, του Veronese, ενώ στη Ρώμη δέχτηκε την επίδραση του μανιερισμού. Στην Ιταλία, όπου ζωγράφισε έργα όπως το Τρίπτυχο της Μόδενας (Μόδενα, Galleria Estense), την Προσκύνηση των Ποιμένων (Frederickssund, Μουσείο J. F. Willumsen) και την Άποψη του Όρους Σινά (Ηράκλειο, Ιστορικό Μουσείο), διείσδυσε στα ανώτερα κοινωνικά στρώματα και είχε τη στήριξη ισχυρών παραγόντων της καλλιτεχνικής ζωής, όπως του καρδιναλίου Alessandro Farnese, του μικρογράφου Giulio Clovio και του βιβλιοθηκάριου Fulvio Orsini, χωρίς όμως να μπορέσει να εξασφαλίσει κάποια ιδιαιτέρως σημαντική παραγγελία. Στη συνέχεια εγκαταστάθηκε στο Τολέδο της Ισπανίας, την εποχή της βασιλείας του Φίλιππου Β΄, όπου και καθιερώθηκε ως ζωγράφος. Προσωπογραφίες και θρησκευτικά έργα αποτελούν τον κύριο κορμό της ισπανικής παραγωγής του, όπου συγκαταλέγονται και τα περισσότερα από τα αριστουργήματά του. Ιδιαίτερα κατά την τελευταία εικοσιπενταετία της ζωής του (1590-1614) φτάνει στο απώτατο σημείο των προσωπικών του αναζητήσεων και κατακτήσεων, ενώ όψιμες δημιουργίες όπως ο Λαοκόων (π. 1608-1614, Ουάσιγκτον, National Gallery of Art) ή η Άποψη και Χάρτης του Τολέδο (π. 1608-1614, Τολέδο, Μουσείο Greco) εντυπωσιάζουν με τις εικονογραφικές τους καινοτομίες. Ήταν επίσης γλύπτης και αρχιτέκτονας, ενώ συνέταξε και θεωρητικά κείμενα για την τέχνη, που δυστυχώς έχουν χαθεί. Καλλιτέχνης με ανθρωπιστική παιδεία, έδωσε ένα έργο μοναδικό, που διακρίνεται για τη βαθιά πνευματικότητά του και φέρει έντονη τη σφραγίδα της διάνοιας του ίδιου του δημιουργού, που θεωρείται ένας από τους προδρόμους της νεότερης ευρωπαϊκής τέχνης. ','Ηράκλειο Κρήτης','Τολέδο','Α');
@@ -317,22 +362,6 @@ INSERT INTO "Artist" VALUES (10,'Βολανάκης Κωνσταντίνος','2
 INSERT INTO "Artist" VALUES (11,'Καπράλος Χρήστος','2021-12-25 15:57',1909,1993,'Καταγόμενος από φτωχή οικογένεια αγροτών, πήρε τα πρώτα μαθήματα ζωγραφικής από αγιογράφους της περιοχής. Το 1928 ήρθε στην Αθήνα, εργαζόμενος αρχικά ως σχεδιαστής στο γραφείο του αρχιτέκτονα Β. Κουρεμένου και κατόπιν στο εργαστήριο του Βάσου Φαληρέα. Από το 1930 ως το 1934, με υποστήριξη των αδελφών Παπαστράτου, σπούδασε ζωγραφική στη Σχολή Καλών Τεχνών. Το ταλέντο του όμως στη γλυπτική τον οδήγησε την ίδια χρονιά στο Παρίσι. Στη γαλλική πρωτεύουσα παρακολούθησε μαθήματα στις Ακαδημίες Κολαροσί και Γκραντ Σωμιέρ, εργαζόμενος κυρίως κοντά στον Μαρσέλ Ζιμόν. Το 1940, με την έκρηξη του πολέμου, επέστρεψε στην Ελλάδα και στρατεύτηκε. Στη διάρκεια της Κατοχής κατέφυγε στο χωριό του δουλεύοντας στα καπνοχώραφα, χωρίς όμως να εγκαταλείψει τη γλυπτική. Το 1946 επέστρεψε και πάλι στην Αθήνα, όπου άνοιξε εργαστήριο και αφοσιώθηκε απερίσπαστος στην τέχνη του. Το 1962 εγκαταστάθηκε στην Αίγινα, όπου περνούσε τον περισσότερο χρόνο του. Από το 1995 το εργαστήριό του εκεί λειτουργεί ως μουσείο. Η εκθεσιακή του δραστηριότητα ξεκίνησε το 1946 με την παρουσίαση της πρώτης ατομικής του έκθεσης στον Παρνασσό. Ακολούθησαν ατομικές παρουσιάσεις στην Ελλάδα και το εξωτερικό, καθώς και αναδρομική έκθεση το 1981 στην Εθνική Πινακοθήκη. Έλαβε επίσης μέρος σε ομαδικές, Πανελλήνιες και διεθνείς διοργανώσεις, όπως οι Μπιενάλε της Βενετίας το 1962 και το 1972 και του Σάο Πάολο το 1975. Επίκεντρο της γλυπτικής του Χρήστου Καπράλου υπήρξε από την αρχή η ανθρώπινη μορφή. Χρησιμοποιώντας αρχικά τον πηλό, το γύψο, την πέτρα και το μάρμαρο φιλοτέχνησε μεμονωμένα γλυπτά ή σειρές, που απέδωσε ρεαλιστικά, έχοντας ως πηγή έμπνευσης την ελληνική γλυπτική της αρχαϊκής, κυρίως, περιόδου. Από τις αρχές της δεκαετίας του `60 στράφηκε σε συνθέσεις αφαιρετικές, όχι όμως εντελώς ανεικονικές. Χρησιμοποιώντας μια δική του τεχνική, δημιούργησε έργα από ελάσματα χαλκού, στα οποία η ηθελημένη παραμόρφωση, η αποσπασματική απόδοση και ο συνδυασμός ετερόκλητων στοιχείων έχουν ως πρότυπο τον εξπρεσιονισμό, το σουρεαλισμό ή το φουτουρισμό. Ενδιαφέρθηκε επίσης για αντικείμενα καθημερινής χρήσης και μορφές ζώων και χρησιμοποίησε το ξύλο για να δημιουργήσει συνθέσεις εμπνευσμένες από τη μυθολογία, την ιστορία και τη χριστιανική παράδοση. ','Παναιτώλιο Αγρινίου','Αθήνα','Α');
 INSERT INTO "Artist" VALUES (12,'Γιάννης Τσαρούχης','2021-12-25 15:54',1910,1989,'Σπούδασε στη Σχολή Καλών Τεχνών (1928-1934) με δασκάλους τους Δημήτριο Μπισκίνη, Δημήτριο Γερανιώτη, Σπύρο Βικάτο, Γεώργιο Ιακωβίδη, Θωμά Θωμόπουλο, Γιάννη Κεφαλληνό και Κωνσταντίνο Παρθένη. Παράλληλα, μαθήτευσε για τέσσερα χρόνια (1930-1934) στο εργαστήριο του Φώτη Κόντογλου, ο οποίος τον μύησε στη βυζαντινή ζωγραφική και μουσική. Το 1935 ταξίδεψε στην Κωνσταντινούπολη και τη Σμύρνη και στη συνέχεια πήγε στο Παρίσι, όπου διδάχτηκε την τεχνική της χαλκογραφίας. Στη γαλλική πρωτεύουσα γνώρισε από κοντά τη ζωγραφική της Αναγέννησης, τον Ιμπρεσιονισμό και το έργο του Θεόφιλου από τη συλλογή του Teriade. Συνάντησε επίσης τον Matisse, τον Laurens και τον Giacometti. Το 1936 επέστρεψε στην Ελλάδα και δύο χρόνια αργότερα οργάνωσε την πρώτη ατομική του έκθεση στο κατάστημα του Θ. Αλεξόπουλου στην Αθήνα. Ακολούθησαν πολλές ατομικές παρουσιάσεις, μεταξύ των οποίων αναδρομικές το 1952 στο Βρετανικό Συμβούλιο, το 1966 στη γκαλερί Άστορ και το 1981 στο Αρχαιολογικό Μουσείο της Θεσσαλονίκης. Το 1980 οργανώθηκε ατομική έκθεση του Γιάννη Τσαρούχη στο Grand Palais στο Παρίσι. Η εκθεσιακή του δραστηριότητα περιλαμβάνει επίσης συμμετοχές σε εκθέσεις της ομάδας Αρμός, της οποίας υπήρξε ιδρυτικό μέλος, σε ομαδικές, Πανελλήνιες και διεθνείς, όπως οι Μπιενάλε της Αλεξάνδρειας το 1955 και της Βενετίας το 1958. Από το 1928 ξεκίνησε την επαγγελματική του ενασχόληση με τη σκηνογραφία, που καλύπτει ένα σημαντικό μέρος της καλλιτεχνικής του δημιουργίας και περιλαμβάνει συνεργασία με το Εθνικό  έατρο, τη Λυρική Σκηνή, το Θέατρο Τέχνης του Κάρολου Κουν, το Αρχαίο Θέατρο της Επιδαύρου, το Covent Garden του Λονδίνου, τη Dallas Civic Opera του Τέξας, το Theatre National Populaire του Παρισιού και το Teatro Olympico της Βιτσέντζα. Συνεργάστηκε επίσης με σημαντικούς έλληνες και ξένους καλλιτέχνες, όπως η Μαρία Κάλλας, η Κατίνα Παξινού, ο Αλέξης Μινωτής, ο Μιχάλης Κακογιάννης, ο Jules Dassin και o Franco Zeffirelli. Την περίοδο 1960-1962 εξάλλου δίδαξε σκηνογραφία στη Σχολή Δοξιάδη. Παράλληλα ασχολήθηκε με την εικονογράφηση βιβλίων, ενώ, στο πλαίσιο του ευρύτερου ενδιαφέροντός του για την τέχνη, έγραψε κείμενα και κριτικές που αργότερα εκδόθηκαν σε βιβλία. Το 1967, λόγω των πολιτικών συνθηκών, πήγε και πάλι στο Παρίσι, απ` όπου επέστρεψε οριστικά το 1980. Δύο χρόνια αργότερα εγκαινιάστηκε το Ίδρυμα Τσαρούχη στο Μαρούσι (www.tsarouchis.gr), που στεγάζεται στο σπίτι του καλλιτέχνη και περιλαμβάνει έργα δικά του αλλά και άλλων καλλιτεχνών. Από τους σημαντικότερους εκπροσώπους της Γενιάς του `30, ο Τσαρούχης ενσάρκωσε στο έργο του το ιδανικό της ελληνικότητας. Με πολλαπλές επιρροές από την ελληνιστική και τη βυζαντινή τέχνη, την τέχνη της Αναγέννησης και των νεότερων χρόνων, το έργο του Μαtisse, του Θεόφιλου και του Κόντογλου, αλλά και τις φιγούρες του Καραγκιόζη, διαμόρφωσε ένα ιδιαίτερο προσωπικό ύφος και απεικόνισε τοπία, νεκρές φύσεις, γυμνά και αλληγορικές σκηνές. Το ενδιαφέρον του όμως εντοπίστηκε κυρίως στην ανθρώπινη μορφή, δημιουργώντας μεμονωμένα πορτρέτα, αλλά και σκηνές με ναύτες και στρατιώτες, που αποτελούν ένα χαρακτηριστικό μέρος του έργου του. Εξαιρετικά διαφωτιστική σε σχέση με την επαναφήγηση της καλλιτεχνικής του διαδρομής, η έκδοση Γιάννης Τσαρούχης - Ζωγραφική (1990, Έκδοση Ιδρύματος Γιάννη Τσαρούχη), που επιμελήθηκε ο ίδιος κατά το μεγαλύτερο μέρος της, σε συνεργασία με τη Νίκη Γρυπάρη. Από τις πλέον ουσιαστικές απόπειρες προσέγγισης του έργου του μετά το θάνατό του, υπήρξε εξάλλου και η έκθεση Γιάννης Τσαρούχης. Ανάμεσα σε ανατολή και Δύση. Επιλογές από τη συλλογή του Ιδρύματος Γ. Τσαρούχη (επιμέλεια: Άννα Καφέτση, Εθνικό Μουσείο Σύγχρονης Τέχνης, 24/2-3/6/2000). Το Δεκέμβριο του 2009 εγκαινιάστηκε αναδρομική έκθεση του έργου του στο Μουσείο Μπενάκη. ','Πειραιάς','Αθήνα','Α');
 INSERT INTO "Artist" VALUES (13,'Κωνσταντίνος Παρθένης','2021-12-25 15:58',1878,1879,'Δεν υπάρχουν πληροφορίες για τον/την καλλιτέχνη','Αλεξάνδρεια','Αθήνα','Α');
-INSERT INTO "Physical" VALUES (1);
-INSERT INTO "Physical" VALUES (2);
-INSERT INTO "Physical" VALUES (3);
-INSERT INTO "Physical" VALUES (4);
-INSERT INTO "Physical" VALUES (5);
-INSERT INTO "Physical" VALUES (6);
-INSERT INTO "Online" VALUES (7,'https://www.nationalgallery.gr/el/psiphiakes-parousiaseis/museum/giovanni-bellini-andrea-mantegna-dyo-anagennisiakes-eikones-tou-theiou-pathous.html','Ομάδα IT');
-INSERT INTO "Online" VALUES (8,'https://www.nationalgallery.gr/el/psiphiakes-parousiaseis/museum/o-thanatos-sto-ergo-tou-greko.html','Ομάδα IT');
-INSERT INTO "Online" VALUES (9,'https://www.nationalgallery.gr/el/psiphiakes-parousiaseis/museum/dimitrios-filippotis-1.html','Ομάδα IT');
-INSERT INTO "Collection" VALUES (0,'Unknown','Δεν υπάρχουν πληροφορίες για την συγκεκριμένη συλλογή',111111);
-INSERT INTO "Collection" VALUES (1,'Νεοελληνική Ζωγραφική','Μετά την άλωση της Κωνσταντινουπόλεως (1453), η βυζαντινή καλλιτεχνική παράδοση συνεχίζεται σε νέα κέντρα που δημιουργούνται εκτός της οθωμανικής επικράτειας και κυρίως στην ενετοκρατούμενη Κρήτη. Οι εικόνες της Κρητικής Σχολής ήταν ξακουστές και περιζήτητες και πέρα από τα όρια του νησιού. Πολλοί από τους ζωγράφους της Κρητικής Σχολής ήταν «δίγλωσσοι», αφού μπορούσαν να ζωγραφίζουν και alla greca, με βυζαντινή τεχνοτροπία, και alla latina, δηλαδή με το αναγεννησιακό ύφος. Μετά την άλωση του Χάνδακα από τους Τούρκους το 1669, πολλοί καλλιτέχνες θα βρουν καταφύγιο στα ενετοκρατούμενα Επτάνησα. Σιγά σιγά όμως, καθώς οι σχέσεις με τη Βενετία γίνονται στενότερες, το βυζαντινό ιδίωμα υποχωρεί και επικρατεί η δυτική τεχνοτροπία. Η ζωγραφική από ιδεαλιστική τείνει να γίνει ρεαλιστική, από υπερβατική, εγκόσμια, από επίπεδη, τριδιάστατη.',123456);
-INSERT INTO "Collection" VALUES (2,'Δυτικοευρωπαϊκή Ζωγραφική','Δεν υπάρχουν πληροφορίες για την συγκεκριμένη συλλογή',693663);
-INSERT INTO "Collection" VALUES (3,'Νεοελληνική & Ευρωπαϊκή Χαρακτική','Δεν υπάρχουν πληροφορίες για την συγκεκριμένη συλλογή',269964);
-INSERT INTO "Collection" VALUES (4,'Νεοελληνική & Ευρωπαϊκή Γλυπτική','Δεν υπάρχουν πληροφορίες για την συγκεκριμένη συλλογή',111111);
-INSERT INTO "Collection" VALUES (5,'Διακοσημτικές & Εφαρμοσμένες Τέχνες','Δεν υπάρχουν πληροφορίες για την συγκεκριμένη συλλογή',942935);
-INSERT INTO "Collection" VALUES (6,'Φωτογραφικό & Ιστορικό Αρχείο','Δεν υπάρχουν πληροφορίες για την συγκεκριμένη συλλογή',420638);
 INSERT INTO "Guided_Tour" VALUES (1,'Π.Λ.Π.Π.',30,'Ελληνικά','2022-01-22 11:00',90,874834);
 INSERT INTO "Guided_Tour" VALUES (2,'Ίδρυμα Κωφών',9,'Νοηματική','2022-01-01 09:00',120,919288);
 INSERT INTO "Guided_Tour" VALUES (3,'27ο Δημοτικό Σχολείο',15,'Ελληνικά','2022-08-24 11:00',90,919288);
@@ -425,90 +454,61 @@ INSERT INTO "Piece_of_Art" VALUES (11371,'Ανδρικό Γυμνό (Γιωργ�
 INSERT INTO "Piece_of_Art" VALUES (12744,'Επιτύμβια Σύνθεση',11,4,1974,'2020-01-01','2020-01-01','Μπρούντζος','Μπρούντζος',42.0,48.0,4.0,1,NULL,NULL,NULL,NULL,NULL,NULL);
 INSERT INTO "Piece_of_Art" VALUES (12776,'Ανθρωπόμορφο Κεραμικό Αγγείο',11,4,1950,'2020-01-01','2020-01-01','Επιζωγρτφισμένη τερακότα','Επιζωγρτφισμένη τερακότα',23.0,15.0,15.0,1,NULL,NULL,NULL,7,'2003-6-5',NULL);
 INSERT INTO "Piece_of_Art" VALUES (12918,'Άγγελος Σικελιανός',11,4,1951,'2020-01-01','2020-01-01','Πωρόλιθος','Πωρόλιθος',152.0,83.0,9.0,0,NULL,NULL,NULL,NULL,NULL,NULL);
-INSERT INTO "Inspired_by" VALUES (9027,1);
-INSERT INTO "Inspired_by" VALUES (119,4);
-INSERT INTO "Inspired_by" VALUES (602,4);
-INSERT INTO "Inspired_by" VALUES (607,4);
-INSERT INTO "Inspired_by" VALUES (618,4);
-INSERT INTO "Inspired_by" VALUES (635,4);
-INSERT INTO "Inspired_by" VALUES (1858,4);
-INSERT INTO "Inspired_by" VALUES (3395,5);
-INSERT INTO "Inspired_by" VALUES (3497,5);
-INSERT INTO "Inspired_by" VALUES (3498,5);
-INSERT INTO "Inspired_by" VALUES (4961,5);
-INSERT INTO "Inspired_by" VALUES (6178,5);
-INSERT INTO "Inspired_by" VALUES (6179,5);
-INSERT INTO "Inspired_by" VALUES (6180,5);
-INSERT INTO "Inspired_by" VALUES (10606,5);
-INSERT INTO "Inspired_by" VALUES (4961,2);
-INSERT INTO "Inspired_by" VALUES (9027,3);
-INSERT INTO "Inspired_by" VALUES (12744,6);
-INSERT INTO "Inspired_by" VALUES (12776,7);
-INSERT INTO "Inspired_by" VALUES (12918,8);
-INSERT INTO "Inspired_by" VALUES (137,9);
-INSERT INTO "Inspired_by" VALUES (3033,10);
-INSERT INTO "Inspired_by" VALUES (100,11);
-INSERT INTO "Inspired_by" VALUES (10412,12);
-INSERT INTO "Inspired_by" VALUES (10606,13);
-INSERT INTO "Inspired_by" VALUES (9027,14);
-INSERT INTO "Inspired_by" VALUES (3578,15);
-INSERT INTO "Inspired_by" VALUES (607,16);
-INSERT INTO "Inspired_by" VALUES (69,17);
-INSERT INTO "Inspired_by" VALUES (11371,18);
-INSERT INTO "Inspired_by" VALUES (152,19);
-INSERT INTO "Inspired_by" VALUES (642,20);
-INSERT INTO "Inspired_by" VALUES (368,21);
-INSERT INTO "Inspired_by" VALUES (119,23);
-INSERT INTO "Inspired_by" VALUES (3518,24);
-INSERT INTO "Inspired_by" VALUES (6180,25);
-INSERT INTO "Is_Presented" VALUES (1,2);
-INSERT INTO "Is_Presented" VALUES (1,1);
-INSERT INTO "Is_Presented" VALUES (2,1);
-INSERT INTO "Is_Presented" VALUES (3,1);
-INSERT INTO "Is_Presented" VALUES (3,2);
-INSERT INTO "Is_Presented" VALUES (3,5);
-INSERT INTO "Is_Presented" VALUES (4,1);
-INSERT INTO "Is_Presented" VALUES (4,2);
-INSERT INTO "Is_Presented" VALUES (4,3);
-INSERT INTO "Is_Presented" VALUES (5,1);
-INSERT INTO "Is_Presented" VALUES (5,2);
-INSERT INTO "Is_Presented" VALUES (5,3);
-INSERT INTO "Is_Presented" VALUES (5,4);
-INSERT INTO "Is_Presented" VALUES (5,5);
-INSERT INTO "Is_Presented" VALUES (5,6);
-INSERT INTO "Is_Presented" VALUES (6,1);
-INSERT INTO "Is_Presented" VALUES (6,2);
-INSERT INTO "Is_Presented" VALUES (6,3);
-INSERT INTO "Is_Presented" VALUES (6,5);
-INSERT INTO "Is_Presented" VALUES (7,1);
-INSERT INTO "Is_Presented" VALUES (7,2);
-INSERT INTO "Is_Presented" VALUES (7,3);
-INSERT INTO "Is_Presented" VALUES (7,4);
-INSERT INTO "Is_Presented" VALUES (7,5);
-INSERT INTO "Is_Presented" VALUES (7,6);
-INSERT INTO "Is_Presented" VALUES (8,1);
-INSERT INTO "Is_Presented" VALUES (8,2);
-INSERT INTO "Is_Presented" VALUES (8,3);
-INSERT INTO "Is_Presented" VALUES (9,4);
-INSERT INTO "Is_Presented" VALUES (10,5);
-INSERT INTO "Is_Presented" VALUES (11,6);
-INSERT INTO "Is_Presented" VALUES (12,1);
-INSERT INTO "Is_Presented" VALUES (13,2);
-INSERT INTO "Is_Presented" VALUES (14,3);
-INSERT INTO "Is_Presented" VALUES (15,4);
-INSERT INTO "Is_Presented" VALUES (16,5);
-INSERT INTO "Is_Presented" VALUES (17,6);
-INSERT INTO "Is_Presented" VALUES (18,1);
-INSERT INTO "Is_Presented" VALUES (19,1);
-INSERT INTO "Is_Presented" VALUES (20,1);
-INSERT INTO "Is_Presented" VALUES (21,1);
-INSERT INTO "Is_Presented" VALUES (22,1);
-INSERT INTO "Is_Presented" VALUES (23,1);
-INSERT INTO "Is_Presented" VALUES (24,1);
-INSERT INTO "Is_Presented" VALUES (25,1);
-INSERT INTO "Is_Presented" VALUES (25,2);
-INSERT INTO "Is_Presented" VALUES (25,3);
-INSERT INTO "Is_Presented" VALUES (25,4);
-INSERT INTO "Is_Presented" VALUES (25,5);
-INSERT INTO "Is_Presented" VALUES (25,6);
+INSERT INTO "Product" VALUES (1,'Εικόνες','Άγιος Πέτρος (El Greco) - Μικρογραφία',25.0);
+INSERT INTO "Product" VALUES (2,'Εικόνες','Ελπίς',13.0);
+INSERT INTO "Product" VALUES (3,'Αξεσουάρ','Μπρελόκ Άγιος Πέτρος',8.0);
+INSERT INTO "Product" VALUES (4,'Φυλλάδιο','Έργα του Νικολάου Γύζη',0.0);
+INSERT INTO "Product" VALUES (5,'Φυλλάδιο','Έργα του Γιάννη Τσαρούχη',0.0);
+INSERT INTO "Product" VALUES (6,'Μινιατούρα','Επιτύμβια σύνθεση',10.0);
+INSERT INTO "Product" VALUES (7,'Μινιατούρα','Μίνι κεραμικό αγγείο',15.0);
+INSERT INTO "Product" VALUES (8,'Μινιατούρα','Σικελιανός - μινιατούρα',9.0);
+INSERT INTO "Product" VALUES (9,'Εικόνες','Εσθήρ Και Ασσοήρος',26.0);
+INSERT INTO "Product" VALUES (10,'Αξεσουάρ','Γυμνό',12.0);
+INSERT INTO "Product" VALUES (11,'Εικόνες','Αραπάκι',25.0);
+INSERT INTO "Product" VALUES (12,'Μινιατούρα','Ζεϊμπέκης',17.0);
+INSERT INTO "Product" VALUES (13,'Μινιατούρα','Άποψη Πάρκου',20.0);
+INSERT INTO "Product" VALUES (14,'Μινιατούρα','Άγιος Πέτρος',16.0);
+INSERT INTO "Product" VALUES (15,'Αξεσουάρ','Αντιγόνη Και Πολυνείκης',12.0);
+INSERT INTO "Product" VALUES (16,'Εικόνες','Πιατοθήκη',23.0);
+INSERT INTO "Product" VALUES (17,'Αξεσουάρ','Αναμονή',12.0);
+INSERT INTO "Product" VALUES (18,'Εικόνες','Ανδρικό Γυμνό (Γιωργάκης)',21.0);
+INSERT INTO "Product" VALUES (19,'Αξεσουάρ','Κασετίνα με την συναυλία των Αγγέλων',9.0);
+INSERT INTO "Product" VALUES (20,'Μινιατούρα','Αραγμένα Καράβια',10.0);
+INSERT INTO "Product" VALUES (21,'Μινιατούρα','Η Έξοδος Του Άρεως',10.0);
+INSERT INTO "Product" VALUES (22,'Αξεσουάρ','Πιάτο - Αρκαδικό Τοπίο',26.0);
+INSERT INTO "Product" VALUES (23,'Εικόνες','Γιάντες',23.0);
+INSERT INTO "Product" VALUES (24,'Μινιατούρα','Πορτραίτο Γέρου Άνδρα',11.0);
+INSERT INTO "Product" VALUES (25,'Αξεσουάρ','Τσάντα με την ανατολή από το λιμάνι της Χίου',13.0);
+INSERT INTO "Room" VALUES (1,'Δομήνικος Θεοτοκόπουλος',45,1,200);
+INSERT INTO "Room" VALUES (2,'Έλληνες της διασποράς',50,2,240);
+INSERT INTO "Room" VALUES (3,'Αίθουσα Περιοδικών Εκθέσεων',350,0,1000);
+INSERT INTO "Room" VALUES (4,'Αίθουσα υποδοχής',50,0,300);
+INSERT INTO "Worker" VALUES (111111,'Γιώργος Γεωργίου','1981-5-3',1000,'Βότση 1');
+INSERT INTO "Worker" VALUES (117207,'Ιωάννης Παπαρόπουλος','1964-1-24',982,'Βενιζέλου 3');
+INSERT INTO "Worker" VALUES (123456,'Μάριος Πετρόπουλος','1971-4-29',1100,'Κορίνθου 190');
+INSERT INTO "Worker" VALUES (136570,'Μαρία Γερμανού','1967-4-6',1174,'Σκουφά 2');
+INSERT INTO "Worker" VALUES (149652,'Ελένη Σινωπίδη','1977-6-24',1561,'Αμβρακίας 50');
+INSERT INTO "Worker" VALUES (217238,'Δημήτρης Καραμπέτσος','1990-8-10',1427,'Μεσολογγίου 102');
+INSERT INTO "Worker" VALUES (222222,'Σοφία Πέτρου','1957-9-1',1250,'Αγίου Ανδρέου 15');
+INSERT INTO "Worker" VALUES (225447,'Κωνσταντίνος Γεωργιάδης','1986-2-14',1175,'Νίκαιας 20');
+INSERT INTO "Worker" VALUES (269964,'Γεωργία Αθανασοπούλου','1988-6-19',1611,'Σουνίου 30');
+INSERT INTO "Worker" VALUES (305540,'Αναστασία Γκίκα','1967-5-14',1794,'Μαιζώνος 50');
+INSERT INTO "Worker" VALUES (394594,'Ευαγγελία Αλαφούζου','1961-10-2',1161,'Κορίνθου 19');
+INSERT INTO "Worker" VALUES (407927,'Ιωάννα Ακρίτα','1976-7-15',945,'Βότσαρη 18');
+INSERT INTO "Worker" VALUES (420638,'Δήμητρα Σακελλαρίου','1981-7-24',1393,'Καραϊσκάκη 13');
+INSERT INTO "Worker" VALUES (426006,'Ειρήνη Ράπτη','1997-7-26',1460,'Δερβενακίων 30');
+INSERT INTO "Worker" VALUES (474620,'Χρήστος Καζάκος','1967-1-28',1277,'Ρούφου 63');
+INSERT INTO "Worker" VALUES (546318,'Παναγιώτα Ηλιάδη','1981-12-13',1015,'Αράτου 95');
+INSERT INTO "Worker" VALUES (640877,'Χριστίνα Ψωμιάδη','1995-6-3',1657,'Ηλείας 50');
+INSERT INTO "Worker" VALUES (647405,'Παναγιώτης Φύσσας','1975-9-12',1676,'Αμερικής 81');
+INSERT INTO "Worker" VALUES (693663,'Βασίλειος Χατζηπαύλου','1977-2-3',1634,'Κύπρου 34');
+INSERT INTO "Worker" VALUES (737186,'Κωνσταντίνα Χριστοπούλου','1996-11-4',1170,'Φαβιέρου 45');
+INSERT INTO "Worker" VALUES (874834,'Άννα Ιορδανίδου','1972-10-18',1736,'Δήλου 21');
+INSERT INTO "Worker" VALUES (919288,'Αγγελική Δημακοπούλου','1988-2-21',1157,'Αθηνών 201');
+INSERT INTO "Worker" VALUES (926327,'Αθανάσιος Καλύβας','1971-5-9',1211,'Σάμης 92');
+INSERT INTO "Worker" VALUES (942935,'Δέσποινα Μανωλά','1974-5-10',1178,'Ναυπάκου 83');
+INSERT INTO "Worker" VALUES (973070,'Παρασκευή Παπανδρέου','1977-2-23',1326,'Παύλου Μελά 9');
+INSERT INTO "Worker" VALUES (973439,'Φωτεινή Οικονόμου','1964-8-10',955,'Αρόης 76');
+INSERT INTO "Worker" VALUES (977754,'Αλεξάνδρα Μιχαηλίδη','1999-8-13',1113,'Καλαβρύτων 82');
+INSERT INTO "Worker" VALUES (995240,'Ευάγγελος Αποστολόπουλος','1972-6-2',1784,'Πανεπιστημίου 38');
 COMMIT;
